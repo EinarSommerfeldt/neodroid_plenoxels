@@ -20,5 +20,5 @@ pip install tensorboard
 To train:
 ```
 ./launch.sh <exp_name> <GPU_id> <data_dir> -c <config>
-./launch.sh lego [2,3] /home/einarjso/neodroid_datasets/lego -c configs/syn.json
+./launch.sh lego 2,3 /home/einarjso/neodroid_datasets/lego -c configs/syn.json
 ```
