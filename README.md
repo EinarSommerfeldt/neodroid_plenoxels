@@ -1,7 +1,8 @@
 # neodroid_plenoxels
 
 
-Environment Setup:
+# Environment Setup:
+
 Using the https://github.com/sxyu/svox2 environment did NOT work.
 
 Used https://github.com/DanJbk/Plenoxels requirements.txt, replaced "pytorch" with "torch".
