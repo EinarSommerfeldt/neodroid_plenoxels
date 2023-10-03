@@ -21,6 +21,11 @@ pip install lpips
 pip install imageio[ffmpeg]
 ```
 
+In plenoxel folder:
+```
+pip install -e . --verbose
+```
+
 To train:
 ```
 ./launch.sh <exp_name> <GPU_id> <data_dir> -c <config>
