@@ -17,6 +17,8 @@ pip install scipy
 pip install imageio
 pip install opencv-python
 pip install tensorboard
+pip install lpips
+pip install imageio[ffmpeg]
 ```
 
 To train:
