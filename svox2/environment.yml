@@ -1,0 +1,29 @@
+# run: conda env create -f environment.yml
+name: plenoxel
+channels:
+  - pytorch
+  - defaults
+dependencies:
+  - python=3.8.8
+  - numpy
+  - pip
+  - pip:
+      - imageio
+      - imageio-ffmpeg
+      - ipdb
+      - lpips
+      - opencv-python
+      - Pillow
+      - pyyaml
+      - tensorboard
+      - imageio
+      - imageio-ffmpeg
+      - pymcubes
+      - moviepy
+      - matplotlib
+      - scipy
+  - pytorch=2.0.1
+  - torchvision
+  - pytorch-cuda=11.8
+  - tqdm
+
