@@ -12,13 +12,13 @@ from os.path import join, basename, realpath, dirname, exists, splitext
 # This string should point to the folder containing the images
 # used for calibration. The same folder will hold the output.
 # "*.jpg" means that any file with a .jpg extension is used
-image_path_pattern = '../data/calibration/*.jpg'
+image_path_pattern = 'calibration/*.jpg'
 output_folder = dirname(image_path_pattern)
 
 #
 # TASK: Specify these
 #
-board_size = (4,7) # Number of internal corners of the checkerboard (see tutorial)
+board_size = (5,8) # Number of internal corners of the checkerboard (see tutorial)
 square_size = (1,1) # Real world length of the sides of the squares
 
 #
@@ -56,6 +56,7 @@ else:
     image_size = None
     image_paths = glob.glob(image_path_pattern)
     for image_path in sorted(image_paths):
+        print(image_path)
         print('%s...' % basename(image_path), end='')
 
         I = cv.imread(image_path, cv.IMREAD_GRAYSCALE)

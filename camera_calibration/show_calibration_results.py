@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from os.path import join
 
-folder = '../data/calibration'
+folder = 'calibration'
 
 K           = np.loadtxt(join(folder, 'K.txt'))
 dc          = np.loadtxt(join(folder, 'dc.txt'))
