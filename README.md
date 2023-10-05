@@ -32,3 +32,7 @@ To train:
 ./launch.sh lego 2,3 /home/einarjso/neodroid_datasets/lego -c configs/syn_custom.json
 ```
 Logs are saved to ckpt/exp_name
+
+# Dataset:
+
+svox2 can't handle PNG and JPG in uppercase, so these need to be converted to lowercase
