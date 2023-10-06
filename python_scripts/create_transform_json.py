@@ -9,6 +9,16 @@ def T_from_pose(R, t):
     T = np.block([[Rt],[np.array([0,0,0,1])]])
     return T
 
+def R_x(angle):
+    radians = angle*np.pi/180
+    R = np.array([[1,0,0,0],
+                  [0,np.cos(radians),-np.sin(radians),0],
+                  [0,np.sin(radians),np.cos(radians),0],
+                  [0,0,0,1],])
+    return R
+
+
+
 def draw_camera(ax,T,scale=1):
     
     # vertices of a pyramid
@@ -17,7 +27,7 @@ def draw_camera(ax,T,scale=1):
                   [scale, scale, -scale, 1],  
                   [-scale, scale, -scale, 1], 
                   [0, 0, scale, 1]])
-    X = T@v_h.T
+    X = T@R_x(180)@v_h.T
     v = (X[:3,:]/X[3,:]).T
 
     # generate list of sides' polygons of our pyramid
@@ -28,30 +38,30 @@ def draw_camera(ax,T,scale=1):
     ax.add_collection3d(Poly3DCollection(verts, 
     facecolors='cyan', linewidths=1, edgecolors='r', alpha=.25))
 
+def draw_poses():
+    meshroom_sfm = json.load(open("python_scripts\\json\\sfm.json"))
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.set_xlim(-5, 5)
+    ax.set_ylim(-5, 5)
+    ax.set_zlim(-5, 5)
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
 
-meshroom_sfm = json.load(open("python_scripts\\json\\sfm.json"))
-fig = plt.figure()
-ax = fig.add_subplot(111, projection='3d')
-ax.set_xlim(-5, 5)
-ax.set_ylim(-5, 5)
-ax.set_zlim(-5, 5)
-ax.set_xlabel('X')
-ax.set_ylabel('Y')
-ax.set_zlabel('Z')
+    for pose_obj in meshroom_sfm["poses"]:
+        pose = pose_obj["pose"]
+        transform = pose["transform"]
+        rotation = np.array([float(elem) for elem in transform["rotation"]]).reshape((3,3))
+        center = np.array([float(elem) for elem in transform["center"]])
+        T = np.eye(4)
+        T = T_from_pose(rotation, center)
 
-for pose_obj in meshroom_sfm["poses"]:
-    pose = pose_obj["pose"]
-    transform = pose["transform"]
-    rotation = np.array([float(elem) for elem in transform["rotation"]]).reshape((3,3))
-    center = np.array([float(elem) for elem in transform["center"]])
-    T = np.eye(4)
-    T = T_from_pose(rotation, center)
+        
+        draw_camera(ax, T, 0.3)
+        
+        
+    plt.show()
 
-    
-    draw_camera(ax, T, 0.1)
-    
-    
-plt.show()
-
-
+draw_poses()
 
