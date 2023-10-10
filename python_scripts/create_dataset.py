@@ -88,7 +88,7 @@ def create_plenoxel_json(pose_list, view_dict, fov, folder_name):
         
         #Fill frame fields
         filename = view["path"].rsplit("/", 1)[1]
-        frame["file_path"] = "./"+folder_name+"/"+filename.split(".")[0]
+        frame["file_path"] = "./"+folder_name+"/"+filename
         frame["rotation"] = 0 #Useless field, but it's in the example jsons
 
         #Create transform_matrix_field
