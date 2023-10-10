@@ -3,35 +3,107 @@ import numpy as np
 import random
 import json
 import sys
+import shutil
 
-def create_bbox():
-    return 0
+# X_w = R^T X_c - R^T t (cam to world)
+def C2W_from_pose(R:np.array, t:np.array):
+    t_rotated = R.T @ t
+    Rt = np.block([R.T,-np.array([[t_rotated[0]],[t_rotated[1]],[t_rotated[2]]])])
+    T = np.block([[Rt],[np.array([0,0,0,1])]])
+    return T
 
-def create_intrinsics(intrinsics:dict, output_folder):
+#Set bbox as space occupied by cameras
+def create_bbox(pose_list:list):
+
+    temp_list = list()
+    for p in pose_list:
+        #Create transform_matrix_field
+        transform = p["pose"]["transform"]
+        center = np.array([float(elem) for elem in transform["center"]])
+        temp_list.append(center)
+    
+    poses = np.array(temp_list)
+
+    #x_min, y_min, z_min = np.amin(poses,0)
+    #x_max, y_max, z_max = np.max(poses,0)
+    
+    bbox = np.block([np.amin(poses,0), np.max(poses,0), 0.2])
+    np.savetxt(output_folder+f"/bbox.txt", bbox, fmt="%1.8f", newline=" ")
+
+
+#TODO: Do own calibration to get intrinsics
+def create_intrinsics(intrinsics:dict, output_folder): 
     f_x = f_y = float(intrinsics["initialFocalLength"])
     c_x, c_y = [float(i) for i in intrinsics["principalPoint"]]
 
-    output = f"""{f_x} 0 0 {c_x}
-0 {f_y} 0 {c_y}
-0 0 1 0
-0 0 0 1"""
-    print(output)
+    K = np.array([[f_x, 0, 0, c_x],
+              [0, f_y, 0, c_y],
+              [0, 0, 1, 0],
+              [0, 0, 0, 1],])
+    np.savetxt(output_folder+f"/intrinsics.txt", K, fmt="%1.6f")
 
-def create_rgb():
+
+def create_rgb_and_pose(pose_list:list, view_dict:dict, output_folder):
+    random.shuffle(pose_list)
+    #Select train, val and test sets
+    train_poses = pose_list[0:25]
+    val_poses = pose_list[25:40]
+    test_poses = pose_list[40:]
+
+    for n,p in enumerate(train_poses):
+        #Create transform_matrix_field
+        transform = p["pose"]["transform"]
+        rotation = np.array([float(elem) for elem in transform["rotation"]]).reshape((3,3))
+        center = np.array([float(elem) for elem in transform["center"]])
+        C2W_transform_matrix = C2W_from_pose(rotation, center)
+
+        np.savetxt(output_folder+f"/pose/0_train_{n:0=4}.txt", C2W_transform_matrix, fmt="%1.9f")
+
+        #Copy images
+        view = view_dict[p["poseId"]]
+        img_path = view["path"]
+        
+        shutil.copy2(img_path, output_folder+f"/rgb/0_train_{n:0=4}." + img_path.rsplit(".",1)[1])
+
+    for n,p in enumerate(val_poses):
+        #Create transform_matrix_field
+        transform = p["pose"]["transform"]
+        rotation = np.array([float(elem) for elem in transform["rotation"]]).reshape((3,3))
+        center = np.array([float(elem) for elem in transform["center"]])
+        C2W_transform_matrix = C2W_from_pose(rotation, center)
+
+        np.savetxt(output_folder+f"/pose/1_val_{n:0=4}.txt", C2W_transform_matrix, fmt="%1.9f")
+
+        #Copy images
+        view = view_dict[p["poseId"]]
+        img_path = view["path"]
+        
+        shutil.copy2(img_path, output_folder+f"/rgb/1_val_{n:0=4}." + img_path.rsplit(".",1)[1])
+    
+    for n,p in enumerate(test_poses):
+        #Create transform_matrix_field
+        transform = p["pose"]["transform"]
+        rotation = np.array([float(elem) for elem in transform["rotation"]]).reshape((3,3))
+        center = np.array([float(elem) for elem in transform["center"]])
+        C2W_transform_matrix = C2W_from_pose(rotation, center)
+
+        np.savetxt(output_folder+f"/pose/2_test_{n:0=4}.txt", C2W_transform_matrix, fmt="%1.9f")
+
+        #Copy images
+        view = view_dict[p["poseId"]]
+        img_path = view["path"]
+        
+        shutil.copy2(img_path, output_folder+f"/rgb/2_test_{n:0=4}." + img_path.rsplit(".",1)[1])
     return 0
 
-def create_pose():
-    return 0
 
-def create_NSFV():
-    return 0
-
-
-def create_dataset(CameraInfo_path, ConvertSFMFormat_path, output_folder):
+def create_NSFV(CameraInfo_path, ConvertSFMFormat_path, output_folder):
     random.seed(10)
 
     cameraInfo_json = json.load(open(CameraInfo_path))
     sfm_json = json.load(open(ConvertSFMFormat_path))
+
+    
 
     #create dictionary of view data indexed by view ids (viewId = poseId)
     views = cameraInfo_json["views"]
@@ -45,13 +117,20 @@ def create_dataset(CameraInfo_path, ConvertSFMFormat_path, output_folder):
     
 
     poses = sfm_json["poses"]
-    random.shuffle(poses)
-    #Select train, val and test sets
-    train_poses = poses[0:25]
-    val_poses = poses[25:40]
-    test_poses = poses[40:]
+
+    #create directories
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
+    if not os.path.exists(output_folder+"/pose"):
+        os.makedirs(output_folder+"/pose")
+    if not os.path.exists(output_folder+"/rgb"):
+        os.makedirs(output_folder+"/rgb")
 
     create_intrinsics(intrinsics, output_folder)
+    create_bbox(poses)
+    create_rgb_and_pose(poses, view_dict, output_folder)
+
+    
 
     
 
@@ -59,5 +138,5 @@ def create_dataset(CameraInfo_path, ConvertSFMFormat_path, output_folder):
 
 CameraInfo_path = "C:\\Users\\einarjso\\neodroid_plenoxels\\python_scripts\\json\\cameraInit.sfm"
 ConvertSFMFormat_path = "C:\\Users\\einarjso\\neodroid_plenoxels\\python_scripts\\json\\sfm.json"
-output_folder = "C:/Users/einarjso/neodroid_datasets/fruit_plenoxel"
-create_dataset(CameraInfo_path, ConvertSFMFormat_path, output_folder)
+output_folder = r"C:\Users\einarjso\neodroid_plenoxels\dataset"
+create_NSFV(CameraInfo_path, ConvertSFMFormat_path, output_folder)
