@@ -32,14 +32,23 @@ def create_bbox(pose_list:list):
 
 
 #TODO: Do own calibration to get intrinsics
-def create_intrinsics(intrinsics:dict, output_folder): 
+def create_intrinsics(intrinsics:dict, calibration_folder, output_folder): 
     f_x = f_y = float(intrinsics["initialFocalLength"])
     c_x, c_y = [float(i) for i in intrinsics["principalPoint"]]
 
-    K = np.array([[f_x, 0, 0, c_x],
-              [0, f_y, 0, c_y],
-              [0, 0, 1, 0],
-              [0, 0, 0, 1],])
+    K  = np.loadtxt(calibration_folder +'/K.txt')
+
+    #Make K homogenous
+    K_c1 = K[:,:2]
+    K_c3 = K[:,2:]
+    K_c2 = np.zeros((3,1))
+    K_c2[2,0] = 1
+    K = np.hstack((K_c1,K_c2,K_c3))
+
+    new_row = np.array([0,0,0,1])
+    K = np.vstack((K,new_row))
+    K[2,3] = 0
+
     np.savetxt(output_folder+f"/intrinsics.txt", K, fmt="%1.6f")
 
 
@@ -97,7 +106,7 @@ def create_rgb_and_pose(pose_list:list, view_dict:dict, output_folder):
     return 0
 
 
-def create_NSFV(CameraInfo_path, ConvertSFMFormat_path, output_folder):
+def create_NSFV(CameraInfo_path, ConvertSFMFormat_path, calibration_folder, output_folder):
     random.seed(10)
 
     cameraInfo_json = json.load(open(CameraInfo_path))
@@ -126,10 +135,9 @@ def create_NSFV(CameraInfo_path, ConvertSFMFormat_path, output_folder):
     if not os.path.exists(output_folder+"/rgb"):
         os.makedirs(output_folder+"/rgb")
 
-    create_intrinsics(intrinsics, output_folder)
     create_bbox(poses)
     create_rgb_and_pose(poses, view_dict, output_folder)
-
+    create_intrinsics(intrinsics, calibration_folder, output_folder)
     
 
     
@@ -138,5 +146,7 @@ def create_NSFV(CameraInfo_path, ConvertSFMFormat_path, output_folder):
 
 CameraInfo_path = "C:\\Users\\einarjso\\neodroid_plenoxels\\python_scripts\\json\\cameraInit.sfm"
 ConvertSFMFormat_path = "C:\\Users\\einarjso\\neodroid_plenoxels\\python_scripts\\json\\sfm.json"
-output_folder = r"C:\Users\einarjso\neodroid_plenoxels\dataset"
-create_NSFV(CameraInfo_path, ConvertSFMFormat_path, output_folder)
+calibration_folder = r"C:\Users\einarjso\neodroid_plenoxels\camera_calibration\calibration"
+
+output_folder = r"C:\Users\einarjso\neodroid_datasets\fruit_NSVF"
+create_NSFV(CameraInfo_path, ConvertSFMFormat_path,calibration_folder, output_folder)
