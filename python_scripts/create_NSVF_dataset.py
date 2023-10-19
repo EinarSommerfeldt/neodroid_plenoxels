@@ -4,6 +4,10 @@ import random
 import json
 import sys
 import shutil
+from PIL import Image
+import cv2 as cv
+
+SCALING_FACTOR = 4 #Images will be downscaled by SCALING_FACTOR
 
 # X_w = R^T X_c - R^T t (cam to world)
 def C2W_from_pose(R:np.array, t:np.array):
@@ -36,28 +40,22 @@ def create_intrinsics(intrinsics:dict, calibration_folder, output_folder):
     f_x = f_y = float(intrinsics["initialFocalLength"])
     c_x, c_y = [float(i) for i in intrinsics["principalPoint"]]
 
-    K  = np.loadtxt(calibration_folder +'/K.txt')
-
-    #Make K homogenous
-    K_c1 = K[:,:2]
-    K_c3 = K[:,2:]
-    K_c2 = np.zeros((3,1))
-    K_c2[2,0] = 1
-    K = np.hstack((K_c1,K_c2,K_c3))
-
-    new_row = np.array([0,0,0,1])
-    K = np.vstack((K,new_row))
-    K[2,3] = 0
+    K = np.loadtxt(calibration_folder +'/K.txt')
+    K = K/SCALING_FACTOR
+    K[2,2] = 1
 
     np.savetxt(output_folder+f"/intrinsics.txt", K, fmt="%1.6f")
 
-
-def create_rgb_and_pose(pose_list:list, view_dict:dict, output_folder):
+def create_rgb_and_pose(pose_list:list, view_dict:dict, calibration_folder, image_folder, output_folder):
     random.shuffle(pose_list)
     #Select train, val and test sets
-    train_poses = pose_list[0:25]
-    val_poses = pose_list[25:40]
-    test_poses = pose_list[40:]
+    train_poses = pose_list[0:-15]
+    val_poses = pose_list[-15:-10]
+    test_poses = pose_list[-10:]
+
+    K = np.loadtxt(calibration_folder +'/K.txt')/SCALING_FACTOR
+    K[2,2] = 1
+    DC = np.loadtxt(calibration_folder + '/dc.txt')
 
     for n,p in enumerate(train_poses):
         #Create transform_matrix_field
@@ -70,9 +68,17 @@ def create_rgb_and_pose(pose_list:list, view_dict:dict, output_folder):
 
         #Copy images
         view = view_dict[p["poseId"]]
-        img_path = view["path"]
+        img_path = image_folder + "/" + view["path"].rsplit("/",1)[1]
         
-        shutil.copy2(img_path, output_folder+f"/rgb/0_train_{n:0=4}." + img_path.rsplit(".",1)[1])
+        orig_img = Image.open(img_path)
+        resized_img = orig_img.resize((orig_img.size[0]//SCALING_FACTOR, orig_img.size[1]//SCALING_FACTOR))
+        output_path = output_folder+f"/rgb/0_train_{n:0=4}." + img_path.rsplit(".",1)[1].lower()
+        resized_img.save(output_path)
+
+        #Undistort image
+        I = cv.imread(output_path)
+        out = cv.undistort(I, K, DC)
+        cv.imwrite(output_path, out)
 
     for n,p in enumerate(val_poses):
         #Create transform_matrix_field
@@ -85,9 +91,17 @@ def create_rgb_and_pose(pose_list:list, view_dict:dict, output_folder):
 
         #Copy images
         view = view_dict[p["poseId"]]
-        img_path = view["path"]
+        img_path = image_folder + "/" + view["path"].rsplit("/",1)[1]
         
-        shutil.copy2(img_path, output_folder+f"/rgb/1_val_{n:0=4}." + img_path.rsplit(".",1)[1])
+        orig_img = Image.open(img_path)
+        resized_img = orig_img.resize((orig_img.size[0]//SCALING_FACTOR, orig_img.size[1]//SCALING_FACTOR))
+        output_path = output_folder+f"/rgb/1_val_{n:0=4}." + img_path.rsplit(".",1)[1].lower()
+        resized_img.save(output_path)
+
+        #Undistort image
+        I = cv.imread(output_path)
+        out = cv.undistort(I, K, DC)
+        cv.imwrite(output_path, out)
     
     for n,p in enumerate(test_poses):
         #Create transform_matrix_field
@@ -98,11 +112,19 @@ def create_rgb_and_pose(pose_list:list, view_dict:dict, output_folder):
 
         np.savetxt(output_folder+f"/pose/2_test_{n:0=4}.txt", C2W_transform_matrix, fmt="%1.9f")
 
-        #Copy images
+        #Copy images and resize
         view = view_dict[p["poseId"]]
-        img_path = view["path"]
-        
-        shutil.copy2(img_path, output_folder+f"/rgb/2_test_{n:0=4}." + img_path.rsplit(".",1)[1])
+        img_path = image_folder + "/" + view["path"].rsplit("/",1)[1]
+
+        orig_img = Image.open(img_path)
+        resized_img = orig_img.resize((orig_img.size[0]//SCALING_FACTOR, orig_img.size[1]//SCALING_FACTOR))
+        output_path = output_folder+f"/rgb/2_test_{n:0=4}." + img_path.rsplit(".",1)[1].lower()
+        resized_img.save(output_path)
+
+        #Undistort image
+        I = cv.imread(output_path)
+        out = cv.undistort(I, K, DC)
+        cv.imwrite(output_path, out)
     return 0
 
 
@@ -111,8 +133,6 @@ def create_NSFV(CameraInfo_path, ConvertSFMFormat_path, calibration_folder, outp
 
     cameraInfo_json = json.load(open(CameraInfo_path))
     sfm_json = json.load(open(ConvertSFMFormat_path))
-
-    
 
     #create dictionary of view data indexed by view ids (viewId = poseId)
     views = cameraInfo_json["views"]
@@ -136,17 +156,18 @@ def create_NSFV(CameraInfo_path, ConvertSFMFormat_path, calibration_folder, outp
         os.makedirs(output_folder+"/rgb")
 
     create_bbox(poses)
-    create_rgb_and_pose(poses, view_dict, output_folder)
+    create_rgb_and_pose(poses, view_dict, calibration_folder, image_folder, output_folder)
     create_intrinsics(intrinsics, calibration_folder, output_folder)
     
+    return 0
 
     
 
 
-
-CameraInfo_path = "C:\\Users\\einarjso\\neodroid_plenoxels\\python_scripts\\json\\cameraInit.sfm"
-ConvertSFMFormat_path = "C:\\Users\\einarjso\\neodroid_plenoxels\\python_scripts\\json\\sfm.json"
+image_folder = r"C:\Users\einarjso\neodroid_datasets\books"
+CameraInfo_path = r"C:\Users\einarjso\neodroid_datasets\books\cameraInit.sfm"
+ConvertSFMFormat_path = r"C:\Users\einarjso\neodroid_datasets\books\sfm.json"
 calibration_folder = r"C:\Users\einarjso\neodroid_plenoxels\camera_calibration\calibration"
 
-output_folder = r"C:\Users\einarjso\neodroid_datasets\fruit_NSVF"
+output_folder = r"C:\Users\einarjso\neodroid_datasets\books_NSVF_4_undistort"
 create_NSFV(CameraInfo_path, ConvertSFMFormat_path,calibration_folder, output_folder)

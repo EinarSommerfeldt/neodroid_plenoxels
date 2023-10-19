@@ -51,7 +51,7 @@ def draw_camera(ax,T,scale=1):
     facecolors='cyan', linewidths=0.4, edgecolors='r', alpha=.25))
 
 def draw_poses():
-    meshroom_sfm = json.load(open("python_scripts\\json\\sfm.json"))
+    meshroom_sfm = json.load(open(r"C:\Users\einarjso\Downloads\Lighthouse\sfm.json"))
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     ax.set_xlim(-5, 5)
@@ -173,5 +173,5 @@ def create_dataset(CameraInfo_path, ConvertSFMFormat_path, output_folder):
 CameraInfo_path = "C:\\Users\\einarjso\\neodroid_plenoxels\\python_scripts\\json\\cameraInit.sfm"
 ConvertSFMFormat_path = "C:\\Users\\einarjso\\neodroid_plenoxels\\python_scripts\\json\\sfm.json"
 output_folder = "C:/Users/einarjso/neodroid_datasets/fruit_plenoxel"
-create_dataset(CameraInfo_path, ConvertSFMFormat_path, output_folder)
 
+draw_poses()
