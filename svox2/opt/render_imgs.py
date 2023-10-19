@@ -77,7 +77,7 @@ parser.add_argument('--ray_len',
 
 args = parser.parse_args()
 config_util.maybe_merge_config_file(args, allow_invalid=True)
-device = 'cuda:0'
+device = 'cuda:2'
 
 if args.timing:
     args.no_lpips = True
