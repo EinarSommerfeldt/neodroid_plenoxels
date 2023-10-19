@@ -29,7 +29,7 @@ pip install -e . --verbose
 To train: (in svox2/opt )
 ```
 ./launch.sh <exp_name> <GPU_id> <data_dir> -c <config>
-./launch.sh lego 2,3 /home/einarjso/neodroid_datasets/lego -c configs/syn_custom.json
+./launch.sh lego 2,3 /home/einarjso/neodroid_datasets/fruit_ooo -c configs/neodroid.json
 ```
 Logs are saved to ckpt/exp_name
 
