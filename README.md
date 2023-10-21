@@ -19,6 +19,7 @@ pip install opencv-python
 pip install tensorboard
 pip install lpips
 pip install imageio[ffmpeg]
+pip install git+https://github.com/Fraunhofer-IIS/camorph
 ```
 
 In /svox2:
