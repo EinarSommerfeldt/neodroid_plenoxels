@@ -6,8 +6,23 @@ import sys
 import shutil
 from PIL import Image
 import cv2 as cv
+from scipy.spatial.transform import Rotation 
 
 SCALING_FACTOR = 4 #Images will be downscaled by SCALING_FACTOR
+
+
+Md = Rotation.from_euler('y', 180, degrees=True).as_matrix() #Rotation difference between camera frames
+Mb = np.array([[-1,0,0],
+               [0,-1,0],
+               [0,0,1],]) #Conversion from meshroom to colmap coords
+
+# X_c = R X_w + t (world to cam)
+def W2C_from_pose(R, t): #Colmap has different coordinate system, see illustrations
+    
+    R = Mb@R@Md
+    Rt = np.block([R,np.array([[-t[0]],[-t[1]],[t[2]]])])
+    T = np.block([[Rt],[np.array([0,0,0,1])]])
+    return T
 
 # X_w = R^T X_c - R^T t (cam to world)
 def C2W_from_pose(R:np.array, t:np.array):
@@ -49,9 +64,9 @@ def create_intrinsics(intrinsics:dict, calibration_folder, output_folder):
 def create_rgb_and_pose(pose_list:list, view_dict:dict, calibration_folder, image_folder, output_folder):
     random.shuffle(pose_list)
     #Select train, val and test sets
-    train_poses = pose_list[0:-15]
-    val_poses = pose_list[-15:-10]
-    test_poses = pose_list[-10:]
+    train_poses = pose_list[0:-100]
+    val_poses = pose_list[-100:-50]
+    test_poses = pose_list[-50:]
 
     K = np.loadtxt(calibration_folder +'/K.txt')/SCALING_FACTOR
     K[2,2] = 1
@@ -60,9 +75,9 @@ def create_rgb_and_pose(pose_list:list, view_dict:dict, calibration_folder, imag
     for n,p in enumerate(train_poses):
         #Create transform_matrix_field
         transform = p["pose"]["transform"]
-        rotation = np.array([float(elem) for elem in transform["rotation"]]).reshape((3,3))
+        rotation = np.array([float(elem) for elem in transform["rotation"]]).reshape((3,3)).T #column-major Eigen matrix
         center = np.array([float(elem) for elem in transform["center"]])
-        C2W_transform_matrix = C2W_from_pose(rotation, center)
+        C2W_transform_matrix = W2C_from_pose(rotation, center)
 
         np.savetxt(output_folder+f"/pose/0_train_{n:0=4}.txt", C2W_transform_matrix, fmt="%1.9f")
 
@@ -83,9 +98,9 @@ def create_rgb_and_pose(pose_list:list, view_dict:dict, calibration_folder, imag
     for n,p in enumerate(val_poses):
         #Create transform_matrix_field
         transform = p["pose"]["transform"]
-        rotation = np.array([float(elem) for elem in transform["rotation"]]).reshape((3,3))
+        rotation = np.array([float(elem) for elem in transform["rotation"]]).reshape((3,3)).T #column-major Eigen matrix
         center = np.array([float(elem) for elem in transform["center"]])
-        C2W_transform_matrix = C2W_from_pose(rotation, center)
+        C2W_transform_matrix = W2C_from_pose(rotation, center)
 
         np.savetxt(output_folder+f"/pose/1_val_{n:0=4}.txt", C2W_transform_matrix, fmt="%1.9f")
 
@@ -106,9 +121,9 @@ def create_rgb_and_pose(pose_list:list, view_dict:dict, calibration_folder, imag
     for n,p in enumerate(test_poses):
         #Create transform_matrix_field
         transform = p["pose"]["transform"]
-        rotation = np.array([float(elem) for elem in transform["rotation"]]).reshape((3,3))
+        rotation = np.array([float(elem) for elem in transform["rotation"]]).reshape((3,3)).T #column-major Eigen matrix
         center = np.array([float(elem) for elem in transform["center"]])
-        C2W_transform_matrix = C2W_from_pose(rotation, center)
+        C2W_transform_matrix = W2C_from_pose(rotation, center)
 
         np.savetxt(output_folder+f"/pose/2_test_{n:0=4}.txt", C2W_transform_matrix, fmt="%1.9f")
 
@@ -164,10 +179,10 @@ def create_NSFV(CameraInfo_path, ConvertSFMFormat_path, calibration_folder, outp
     
 
 
-image_folder = r"C:\Users\einarjso\neodroid_datasets\books"
-CameraInfo_path = r"C:\Users\einarjso\neodroid_datasets\books\cameraInit.sfm"
-ConvertSFMFormat_path = r"C:\Users\einarjso\neodroid_datasets\books\sfm.json"
-calibration_folder = r"C:\Users\einarjso\neodroid_plenoxels\camera_calibration\calibration"
+image_folder = r"/home/einarjso/Lighthouse"
+CameraInfo_path = r"/home/einarjso/Lighthouse/cameraInit.sfm"
+ConvertSFMFormat_path = r"/home/einarjso/Lighthouse/sfm.json"
+calibration_folder = r"/home/einarjso/Lighthouse"
 
-output_folder = r"C:\Users\einarjso\neodroid_datasets\books_NSVF_4_undistort"
+output_folder = r"/home/einarjso/Lighthouse_colmap"
 create_NSFV(CameraInfo_path, ConvertSFMFormat_path,calibration_folder, output_folder)
