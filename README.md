@@ -19,13 +19,16 @@ pip install opencv-python
 pip install tensorboard
 pip install lpips
 pip install imageio[ffmpeg]
-pip install git+https://github.com/Fraunhofer-IIS/camorph
+pip install pyquaternion
+pip install rdflib
 ```
 
 In /svox2:
 ```
 pip install -e . --verbose
 ```
+
+
 
 To train: (in svox2/opt )
 ```
