@@ -23,7 +23,7 @@ from tqdm import tqdm
 from warnings import warn
 
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:2" if torch.cuda.is_available() else "cpu")
 
 def read_colmap(strPath):
     # https://github.com/colmap/colmap/blob/master/src/ui/model_viewer_widget.cc#L71

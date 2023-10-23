@@ -7,38 +7,29 @@ import shutil
 from PIL import Image
 import cv2 as cv
 from scipy.spatial.transform import Rotation 
+
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'camorph'))
 import camorph.camorph as camorph
 
 SCALING_FACTOR = 4 #Images will be downscaled by SCALING_FACTOR
+DATASET_SPLIT = np.array([100,10,10])
 
-Md = Rotation.from_euler('y', 180, degrees=True).as_matrix() #Rotation difference between camera frames
-Mb = np.array([[-1,0,0],
-               [0,-1,0],
-               [0,0,1],]) #Conversion from meshroom to colmap coords
-
-# X_c = R X_w + t (world to cam)
-def W2C_from_pose(R, t): #Colmap has different coordinate system, see illustrations
-    
-    R = Mb@R@Md
-    Rt = np.block([R,np.array([[-t[0]],[-t[1]],[t[2]]])])
-    T = np.block([[Rt],[np.array([0,0,0,1])]])
-    return T
-
-# X_w = R^T X_c - R^T t (cam to world)
-def C2W_from_pose(R:np.array, t:np.array):
-    t_rotated = R.T @ t
-    Rt = np.block([R.T,-np.array([[t_rotated[0]],[t_rotated[1]],[t_rotated[2]]])])
+Ry = Rotation.from_euler('y', 180, degrees=True).as_matrix() 
+Rz = Rotation.from_euler('z', 180, degrees=True).as_matrix() 
+def create_transform_matrix(R,t):
+    R = R@Rz@Ry
+    Rt = np.block([R,np.array([[t[0]],[t[1]],[t[2]]])])
     T = np.block([[Rt],[np.array([0,0,0,1])]])
     return T
 
 #Set bbox as space occupied by cameras
-def create_bbox(pose_list:list):
+def create_bbox(colmap_poses:dict):
 
     temp_list = list()
-    for p in pose_list:
+    for key, item in colmap_poses.items():
         #Create transform_matrix_field
-        transform = p["pose"]["transform"]
-        center = np.array([float(elem) for elem in transform["center"]])
+        center = item[1]
         temp_list.append(center)
     
     poses = np.array(temp_list)
@@ -61,26 +52,21 @@ def create_intrinsics(intrinsics:dict, calibration_folder, output_folder):
 
     np.savetxt(output_folder+f"/intrinsics.txt", K, fmt="%1.6f")
 
-def create_rgb_and_pose(pose_list:list, view_dict:dict, calibration_folder, image_folder, output_folder):
+def create_rgb_and_pose(colmap_poses_dict:dict, pose_list:list, view_dict:dict, calibration_folder, image_folder, output_folder):
     random.shuffle(pose_list)
     #Select train, val and test sets
-    train_poses = pose_list[0:-100]
-    val_poses = pose_list[-100:-50]
-    test_poses = pose_list[-50:]
+    train_size = int(DATASET_SPLIT[0]/np.sum(DATASET_SPLIT)*len(pose_list))
+    val_size = int(DATASET_SPLIT[1]/np.sum(DATASET_SPLIT)*len(pose_list))
+
+    train_poses = pose_list[0:train_size]
+    val_poses = pose_list[train_size:train_size+val_size]
+    test_poses = pose_list[train_size+val_size:]
 
     K = np.loadtxt(calibration_folder +'/K.txt')/SCALING_FACTOR
     K[2,2] = 1
     DC = np.loadtxt(calibration_folder + '/dc.txt')
 
     for n,p in enumerate(train_poses):
-        #Create transform_matrix_field
-        transform = p["pose"]["transform"]
-        rotation = np.array([float(elem) for elem in transform["rotation"]]).reshape((3,3)).T #column-major Eigen matrix
-        center = np.array([float(elem) for elem in transform["center"]])
-        C2W_transform_matrix = W2C_from_pose(rotation, center)
-
-        np.savetxt(output_folder+f"/pose/0_train_{n:0=4}.txt", C2W_transform_matrix, fmt="%1.9f")
-
         #Copy images and resize
         view = view_dict[p["poseId"]]
         img_name = view["path"].rsplit("/",1)[1]
@@ -97,15 +83,13 @@ def create_rgb_and_pose(pose_list:list, view_dict:dict, calibration_folder, imag
         out = cv.undistort(I, K, DC)
         cv.imwrite(output_path, out)
 
+        #Create transform_matrix field
+        rotation, center = colmap_poses_dict[img_name.split(".")[0]]
+        W2C_transform_matrix = create_transform_matrix(rotation, center)
+
+        np.savetxt(output_folder+f"/pose/0_train_{n:0=4}.txt", W2C_transform_matrix, fmt="%1.9f")
+
     for n,p in enumerate(val_poses):
-        #Create transform_matrix_field
-        transform = p["pose"]["transform"]
-        rotation = np.array([float(elem) for elem in transform["rotation"]]).reshape((3,3)).T #column-major Eigen matrix
-        center = np.array([float(elem) for elem in transform["center"]])
-        C2W_transform_matrix = W2C_from_pose(rotation, center)
-
-        np.savetxt(output_folder+f"/pose/1_val_{n:0=4}.txt", C2W_transform_matrix, fmt="%1.9f")
-
         #Copy images and resize
         view = view_dict[p["poseId"]]
         img_name = view["path"].rsplit("/",1)[1]
@@ -121,16 +105,14 @@ def create_rgb_and_pose(pose_list:list, view_dict:dict, calibration_folder, imag
         I = cv.imread(output_path)
         out = cv.undistort(I, K, DC)
         cv.imwrite(output_path, out)
+
+        #Create transform_matrix field
+        rotation, center = colmap_poses_dict[img_name.split(".")[0]]
+        W2C_transform_matrix = create_transform_matrix(rotation, center)
+
+        np.savetxt(output_folder+f"/pose/1_val_{n:0=4}.txt", W2C_transform_matrix, fmt="%1.9f")
     
     for n,p in enumerate(test_poses):
-        #Create transform_matrix_field
-        transform = p["pose"]["transform"]
-        rotation = np.array([float(elem) for elem in transform["rotation"]]).reshape((3,3)).T #column-major Eigen matrix
-        center = np.array([float(elem) for elem in transform["center"]])
-        C2W_transform_matrix = W2C_from_pose(rotation, center)
-
-        np.savetxt(output_folder+f"/pose/2_test_{n:0=4}.txt", C2W_transform_matrix, fmt="%1.9f")
-
         #Copy images and resize
         view = view_dict[p["poseId"]]
         img_name = view["path"].rsplit("/",1)[1]
@@ -142,10 +124,18 @@ def create_rgb_and_pose(pose_list:list, view_dict:dict, calibration_folder, imag
         output_path = output_folder+f"/rgb/2_test_{n:0=4}." + img_path.rsplit(".",1)[1].lower()
         resized_img.save(output_path)
 
-        #Undistort image
+        #Undistort image and save
         I = cv.imread(output_path)
         out = cv.undistort(I, K, DC)
         cv.imwrite(output_path, out)
+
+        #Create transform_matrix field
+        rotation, center = colmap_poses_dict[img_name.split(".")[0]]
+        W2C_transform_matrix = create_transform_matrix(rotation, center)
+
+        np.savetxt(output_folder+f"/pose/2_test_{n:0=4}.txt", W2C_transform_matrix, fmt="%1.9f")
+
+        
     return 0
 
 
@@ -154,11 +144,11 @@ def create_NSFV(cameras_sfm_path, calibration_folder, output_folder):
 
     cameras_sfm_json = json.load(open(cameras_sfm_path))
 
+    #Create dict of converted camera poses
     cams = camorph.read_cameras('meshroom',cameras_sfm_path)
-    for c in camorph.convert("colmap",cams):
-        print(c.name)
-        print(c.r.rotation_matrix)
-        print(c.t)
+    colmap_poses = dict() # img_name -> [R, t]
+    for c in camorph.convert("colmap",cams): #Converts meshroom coords to colmap coord system
+        colmap_poses[c.name] = [c.r.rotation_matrix, c.t]
 
 
     #create dictionary of view data indexed by view ids (viewId = poseId)
@@ -182,8 +172,8 @@ def create_NSFV(cameras_sfm_path, calibration_folder, output_folder):
     if not os.path.exists(output_folder+"/rgb"):
         os.makedirs(output_folder+"/rgb")
 
-    create_bbox(poses)
-    create_rgb_and_pose(poses, view_dict, calibration_folder, image_folder, output_folder)
+    create_bbox(colmap_poses)
+    create_rgb_and_pose(colmap_poses, poses, view_dict, calibration_folder, image_folder, output_folder)
     create_intrinsics(intrinsics, calibration_folder, output_folder)
     
     return 0
@@ -191,9 +181,9 @@ def create_NSFV(cameras_sfm_path, calibration_folder, output_folder):
     
 
 
-image_folder = r"/home/einarjso/neodroid_datasets/fruit1"
-cameras_sfm_path = r"/home/einarjso/neodroid_datasets/fruit1/cameras.sfm" #TODO: ADD to readme where to find
-calibration_folder = r"/home/einarjso/neodroid_plenoxels/camera_calibration/calibration"
+image_folder = r"/home/einarjso/Lighthouse"
+cameras_sfm_path = r"/home/einarjso/Lighthouse/cameras.sfm" #TODO: ADD to readme where to find
+calibration_folder = r"/home/einarjso/Lighthouse"
 
-output_folder = r"/home/einarjso/fruit_colmorph"
+output_folder = r"/home/einarjso/Lighthouse_colmorph_updown"
 create_NSFV(cameras_sfm_path,calibration_folder, output_folder)

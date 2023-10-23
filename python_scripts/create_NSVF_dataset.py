@@ -18,8 +18,7 @@ Mb = np.array([[-1,0,0],
 
 # X_c = R X_w + t (world to cam)
 def W2C_from_pose(R, t): #Colmap has different coordinate system, see illustrations
-    
-    R = Mb@R@Md
+    #R = Mb@R@Md
     Rt = np.block([R,np.array([[-t[0]],[-t[1]],[t[2]]])])
     T = np.block([[Rt],[np.array([0,0,0,1])]])
     return T
