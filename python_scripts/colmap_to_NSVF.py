@@ -29,18 +29,35 @@ def create_img_info(imagestxt_path):
                 continue
             relevant = True
     return img_info
-            
-#TODO:
-#pose X
-#rgb X
-#bbox
-#intrinsics
-            
+
+def qvec2rotmat(qvec):
+    return np.array(
+        [
+            [
+                1 - 2 * qvec[2] ** 2 - 2 * qvec[3] ** 2,
+                2 * qvec[1] * qvec[2] - 2 * qvec[0] * qvec[3],
+                2 * qvec[3] * qvec[1] + 2 * qvec[0] * qvec[2],
+            ],
+            [
+                2 * qvec[1] * qvec[2] + 2 * qvec[0] * qvec[3],
+                1 - 2 * qvec[1] ** 2 - 2 * qvec[3] ** 2,
+                2 * qvec[2] * qvec[3] - 2 * qvec[0] * qvec[1],
+            ],
+            [
+                2 * qvec[3] * qvec[1] - 2 * qvec[0] * qvec[2],
+                2 * qvec[2] * qvec[3] + 2 * qvec[0] * qvec[1],
+                1 - 2 * qvec[1] ** 2 - 2 * qvec[2] ** 2,
+            ],
+        ]
+    )
+
 def populate_pose(output_folder, img_info, prefix):
     for n,i in enumerate(img_info):
         [IMAGE_ID, QW, QX, QY, QZ, TX, TY, TZ, CAMERA_ID, NAME] = i
-        R = Rotation.from_quat([float(QW), float(QX), float(QY), float(QZ)]).as_matrix()
-        Rt = np.block([R,np.array([[float(TX)],[float(TY)],[float(TZ)]])])
+        R = qvec2rotmat([float(QW), float(QX), float(QY), float(QZ)])
+        t = np.array([[float(TX)],[float(TY)],[float(TZ)]])
+        t = -R.T @ t
+        Rt = np.block([R.T,t])
         T = np.block([[Rt],[np.array([0,0,0,1])]])
         np.savetxt(output_folder+f"/pose/{prefix}{n:0=4}.txt", T, fmt="%1.9f")
     return 1
@@ -129,8 +146,9 @@ def colmap_to_NSVF(output_folder, image_folder, calibration_folder, imagestxt_pa
     return 1
 
 
-imagestxt_path = r"C:\Users\einar\Desktop\fruit_colmap\images.txt"
-output_folder = r"dummy"
-image_folder = r"C:\Users\einar\Desktop\fruit_colmap\images"
-calibration_folder = r"C:\Users\einar\Desktop\neodroid_plenoxels\camera_calibration\calibration"
+imagestxt_path = r"/home/einarjso/fruit_colmap/images.txt"
+image_folder = r"/home/einarjso/fruit_colmap/images"
+calibration_folder = r"/home/einarjso/neodroid_plenoxels/camera_calibration/calibration"
+
+output_folder = r"/home/einarjso/fruit_colmap_NSVF_c2w"
 colmap_to_NSVF(output_folder, image_folder, calibration_folder, imagestxt_path)
