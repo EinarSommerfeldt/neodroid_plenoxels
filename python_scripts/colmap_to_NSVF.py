@@ -5,7 +5,7 @@ import random
 import cv2 as cv
 from PIL import Image
 
-SCALING_FACTOR = 4 #Images will be downscaled by SCALING_FACTOR
+SCALING_FACTOR = 2 #Images will be downscaled by SCALING_FACTOR
 DATASET_SPLIT = np.array([100,10,10])
 
 # Image list with two lines of data per image:
@@ -146,9 +146,9 @@ def colmap_to_NSVF(output_folder, image_folder, calibration_folder, imagestxt_pa
     return 1
 
 
-imagestxt_path = r"/home/einarjso/fruit_colmap/images.txt"
-image_folder = r"/home/einarjso/fruit_colmap/images"
-calibration_folder = r"/home/einarjso/neodroid_plenoxels/camera_calibration/calibration"
+imagestxt_path = r"/home/einarjso/Lighthouse_colmap/images.txt"
+image_folder = r"/home/einarjso/Lighthouse_colmap/images"
+calibration_folder = r"/home/einarjso/Lighthouse"
 
-output_folder = r"/home/einarjso/fruit_colmap_NSVF_c2w"
+output_folder = r"/home/einarjso/Lighthouse_colmap_NSVF_c2w"
 colmap_to_NSVF(output_folder, image_folder, calibration_folder, imagestxt_path)

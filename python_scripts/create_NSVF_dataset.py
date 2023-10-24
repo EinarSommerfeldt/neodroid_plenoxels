@@ -49,7 +49,6 @@ def create_bbox(pose_list:list):
     np.savetxt(output_folder+f"/bbox.txt", bbox, fmt="%1.8f", newline=" ")
 
 
-#TODO: Do own calibration to get intrinsics
 def create_intrinsics(intrinsics:dict, calibration_folder, output_folder): 
     f_x = f_y = float(intrinsics["initialFocalLength"])
     c_x, c_y = [float(i) for i in intrinsics["principalPoint"]]
