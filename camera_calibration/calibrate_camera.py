@@ -12,13 +12,13 @@ from os.path import join, basename, realpath, dirname, exists, splitext
 # This string should point to the folder containing the images
 # used for calibration. The same folder will hold the output.
 # "*.jpg" means that any file with a .jpg extension is used
-image_path_pattern = 'calibration/*.jpg'
+image_path_pattern = 'camera_calibration/cal2/*.jpg'
 output_folder = dirname(image_path_pattern)
 
 #
 # TASK: Specify these
 #
-board_size = (5,8) # Number of internal corners of the checkerboard (see tutorial)
+board_size = (5,10) # Number of internal corners of the checkerboard (see tutorial)
 square_size = (1,1) # Real world length of the sides of the squares
 
 #
