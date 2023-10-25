@@ -266,8 +266,7 @@ torch.manual_seed(20200823)
 np.random.seed(20200823)
 
 factor = 1
-print(args.dataset_type)
-exit()
+
 dset = datasets[args.dataset_type](
                args.data_dir,
                split="train",
@@ -275,7 +274,7 @@ dset = datasets[args.dataset_type](
                factor=factor,
                n_images=args.n_train,
                **config_util.build_data_options(args))
-
+exit()
 if args.background_nlayers > 0 and not dset.should_use_background:
     warn('Using a background model for dataset type ' + str(type(dset)) + ' which typically does not use background')
 
