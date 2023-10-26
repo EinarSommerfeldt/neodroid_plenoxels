@@ -3,7 +3,7 @@ import torch
 import numpy as np
 from util import Timing
 from matplotlib import pyplot as plt
-device='cuda:0'
+device='cuda:2'
 
 GRID_FILE = 'lego.npy'
 grid = svox2.SparseGrid(reso=256, device='cpu', radius=1.3256)

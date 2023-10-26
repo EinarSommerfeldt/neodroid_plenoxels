@@ -5,7 +5,7 @@ from util import Timing
 
 torch.random.manual_seed(0)
 
-device = 'cuda:0'
+device = 'cuda:2'
 
 #  GRID_FILE = 'lego.npy'
 #  grid = svox2.SparseGrid(reso=256, device='cpu', radius=1.3256)

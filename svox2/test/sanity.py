@@ -1,7 +1,7 @@
 import torch
 import svox2
 
-device = 'cuda:0'
+device = 'cuda:2'
 
 
 torch.random.manual_seed(4000)
@@ -38,8 +38,8 @@ N_RAYS = 1
 #  origins = origins[27513:27514]
 #  dirs = dirs[27513:27514]
 
-origins = torch.tensor([[-3.8992738723754883, 4.844727993011475, 4.323856830596924]], device='cuda:0')
-dirs = torch.tensor([[1.1424630880355835, -1.2679963111877441, -0.8437137603759766]], device='cuda:0')
+origins = torch.tensor([[-3.8992738723754883, 4.844727993011475, 4.323856830596924]], device='cuda:2')
+dirs = torch.tensor([[1.1424630880355835, -1.2679963111877441, -0.8437137603759766]], device='cuda:2')
 dirs = dirs / torch.norm(dirs, dim=-1).unsqueeze(-1)
 
 rays = svox2.Rays(origins=origins, dirs=dirs)

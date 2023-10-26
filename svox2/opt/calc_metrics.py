@@ -24,7 +24,7 @@ if path.isfile(args.render_dir):
     print('please give the test_renders directory (not checkpoint) in the future')
     args.render_dir = path.join(path.dirname(args.render_dir), 'test_renders')
 
-device = 'cuda:0'
+device = 'cuda:2'
 
 import lpips
 lpips_vgg = lpips.LPIPS(net="vgg").eval().to(device)

@@ -96,7 +96,7 @@ parser.add_argument('--blackbg',
 
 args = parser.parse_args()
 config_util.maybe_merge_config_file(args, allow_invalid=True)
-device = 'cuda:0'
+device = 'cuda:2'
 
 
 dset = datasets[args.dataset_type](args.data_dir, split="test",

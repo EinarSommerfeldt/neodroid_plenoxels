@@ -6,7 +6,7 @@ from util import Timing
 torch.random.manual_seed(2)
 #  torch.random.manual_seed(8289)
 
-device = 'cuda:0'
+device = 'cuda:2'
 dtype = torch.float32
 grid = svox2.SparseGrid(
                      reso=128,
