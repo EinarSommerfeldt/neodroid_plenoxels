@@ -8,7 +8,7 @@
     "lr_sigma": 3e1,
     "lr_sh": 1e-2,
     "near_clip": 0.35,
-    "lr_sigma_delay_steps": 15000,
+    "lr_sigma_delay_steps": 3000,
     "thresh_type": "weight",
     "weight_thresh": 1.28,
     "lambda_tv": 5e-5,
