@@ -274,7 +274,7 @@ dset = datasets[args.dataset_type](
                factor=factor,
                n_images=args.n_train,
                **config_util.build_data_options(args))
-exit()
+
 if args.background_nlayers > 0 and not dset.should_use_background:
     warn('Using a background model for dataset type ' + str(type(dset)) + ' which typically does not use background')
 
@@ -301,7 +301,7 @@ grid = svox2.SparseGrid(reso=reso_list[reso_id],
 grid.sh_data.data[:] = 0.0
 grid.density_data.data[:] = 0.0 if args.lr_fg_begin_step > 0 else args.init_sigma
 
-if grid.use_background:
+if grid.use_background: #True for our usecase
     grid.background_data.data[..., -1] = args.init_sigma_bg
     #  grid.background_data.data[..., :-1] = 0.5 / svox2.utils.SH_C0
 
@@ -315,13 +315,13 @@ if grid.use_background:
 
 optim_basis_mlp = None
 
-if grid.basis_type == svox2.BASIS_TYPE_3D_TEXTURE:
+if grid.basis_type == svox2.BASIS_TYPE_3D_TEXTURE: #False for our usecase
     grid.reinit_learned_bases(init_type='sh')
     #  grid.reinit_learned_bases(init_type='fourier')
     #  grid.reinit_learned_bases(init_type='sg', upper_hemi=True)
     #  grid.basis_data.data.normal_(mean=0.28209479177387814, std=0.001)
 
-elif grid.basis_type == svox2.BASIS_TYPE_MLP:
+elif grid.basis_type == svox2.BASIS_TYPE_MLP: #False our usecase
     # MLP!
     optim_basis_mlp = torch.optim.Adam(
                     grid.basis_mlp.parameters(),
@@ -437,7 +437,7 @@ while True:
                 n_images_gen += 1
 
             if grid.basis_type == svox2.BASIS_TYPE_3D_TEXTURE or \
-               grid.basis_type == svox2.BASIS_TYPE_MLP:
+               grid.basis_type == svox2.BASIS_TYPE_MLP: #False for our case
                  # Add spherical map visualization
                 EQ_RESO = 256
                 eq_dirs = generate_dirs_equirect(EQ_RESO * 2, EQ_RESO)
@@ -541,7 +541,6 @@ while True:
                     grid.sh_data.data *= args.weight_decay_sigma
                 if args.weight_decay_sigma < 1.0:
                     grid.density_data.data *= args.weight_decay_sh
-
             #  # For outputting the % sparsity of the gradient
             #  indexer = grid.sparse_sh_grad_indexer
             #  if indexer is not None:
