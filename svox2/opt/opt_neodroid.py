@@ -480,6 +480,8 @@ while True:
             gstep_id = iter_id + gstep_id_base
             if args.lr_fg_begin_step > 0 and gstep_id == args.lr_fg_begin_step:
                 grid.density_data.data[:] = args.init_sigma
+            
+            #Update Learning rates
             lr_sigma = lr_sigma_func(gstep_id) * lr_sigma_factor
             lr_sh = lr_sh_func(gstep_id) * lr_sh_factor
             lr_basis = lr_basis_func(gstep_id - args.lr_basis_begin_step) * lr_basis_factor
@@ -500,7 +502,7 @@ while True:
             rgb_pred = grid.volume_render_fused(rays, rgb_gt,
                     beta_loss=args.lambda_beta,
                     sparsity_loss=args.lambda_sparsity,
-                    randomize=args.enable_random)
+                    randomize=args.enable_random) #Generates gradients
 
             #  with Timing("loss_comp"):
             mse = F.mse_loss(rgb_gt, rgb_pred)
