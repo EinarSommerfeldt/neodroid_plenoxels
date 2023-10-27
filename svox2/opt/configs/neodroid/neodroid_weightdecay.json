@@ -1,9 +1,10 @@
 {
-    "reso": "[[128, 128, 128], [256, 256, 256]]",
-    "n_iters": 102400,
-    "background_nlayers": 16,
-    "background_reso": 1024,
-    "upsamp_every": 25600,
+    "reso": "[[256, 256, 256]]",
+    "n_iters": 15000,
+    "batch_size": 3000,
+    "background_nlayers": 32,
+    "background_reso": 512,
+    "upsamp_every": 7500,
     "lr_sigma": 3e1,
     "lr_sh": 1e-2,
     "near_clip": 0.35,
@@ -17,5 +18,7 @@
     "lambda_beta": 1e-5,
     "lambda_sparsity": 1e-11,
     "background_brightness": 1.0,
-    "tv_early_only": 0
+    "tv_early_only": 0,
+
+    "weight_decay_sigma":0.8
 }
