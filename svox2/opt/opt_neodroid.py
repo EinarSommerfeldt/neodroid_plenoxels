@@ -539,10 +539,10 @@ while True:
                     summary_writer.add_scalar("lr_sigma_bg", lr_sigma_bg, global_step=gstep_id)
                     summary_writer.add_scalar("lr_color_bg", lr_color_bg, global_step=gstep_id)
 
-                if args.weight_decay_sh < 1.0:
-                    grid.sh_data.data *= args.weight_decay_sigma
-                if args.weight_decay_sigma < 1.0:
-                    grid.density_data.data *= args.weight_decay_sh
+            if args.weight_decay_sh < 1.0:
+                grid.sh_data.data *= args.weight_decay_sigma
+            if args.weight_decay_sigma < 1.0:
+                grid.density_data.data *= args.weight_decay_sh
             #  # For outputting the % sparsity of the gradient
             #  indexer = grid.sparse_sh_grad_indexer
             #  if indexer is not None:
