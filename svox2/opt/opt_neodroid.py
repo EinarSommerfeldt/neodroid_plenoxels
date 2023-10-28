@@ -554,8 +554,7 @@ while True:
             #          sparsity_file.write(f"{gstep_id} {nz}\n")
 
             # Apply TV/Sparsity regularizers
-            if args.lambda_tv > 0.0:
-                print("args.lambda_tv > 0.0")
+            if args.lambda_tv > 0.0: #USED
                 #  with Timing("tv_inpl"):
                 grid.inplace_tv_grad(grid.density_data.grad,
                         scaling=args.lambda_tv,
@@ -563,34 +562,30 @@ while True:
                         logalpha=args.tv_logalpha,
                         ndc_coeffs=dset.ndc_coeffs,
                         contiguous=args.tv_contiguous) #Add gradient of total variation for sigma directly into the gradient tensor
-            if args.lambda_tv_sh > 0.0:
-                print("args.lambda_tv_sh > 0.0")
+            if args.lambda_tv_sh > 0.0: #USED
                 #  with Timing("tv_color_inpl"):
                 grid.inplace_tv_color_grad(grid.sh_data.grad,
                         scaling=args.lambda_tv_sh,
                         sparse_frac=args.tv_sh_sparsity,
                         ndc_coeffs=dset.ndc_coeffs,
                         contiguous=args.tv_contiguous) #Add gradient of total variation for color directly into the gradient tensor
-            if args.lambda_tv_lumisphere > 0.0:
-                print("args.lambda_tv_lumisphere > 0.0")
+            if args.lambda_tv_lumisphere > 0.0: #NOT USED
                 grid.inplace_tv_lumisphere_grad(grid.sh_data.grad,
                         scaling=args.lambda_tv_lumisphere,
                         dir_factor=args.tv_lumisphere_dir_factor,
                         sparse_frac=args.tv_lumisphere_sparsity,
                         ndc_coeffs=dset.ndc_coeffs)
-            if args.lambda_l2_sh > 0.0:
-                print("args.lambda_l2_sh > 0.0")
+            if args.lambda_l2_sh > 0.0: #NOT USED
                 grid.inplace_l2_color_grad(grid.sh_data.grad,
                         scaling=args.lambda_l2_sh) #Add gradient of L2 regularization for color directly into the gradient tensor
             if grid.use_background and (args.lambda_tv_background_sigma > 0.0 or args.lambda_tv_background_color > 0.0):
-                print("grid.use_background and (args.lambda_tv_background_sigma > 0.0 or args.lambda_tv_background_color > 0.0):")
+                #Used
                 grid.inplace_tv_background_grad(grid.background_data.grad,
                         scaling=args.lambda_tv_background_color,
                         scaling_density=args.lambda_tv_background_sigma,
                         sparse_frac=args.tv_background_sparsity,
                         contiguous=args.tv_contiguous) #Add gradient of total variation for color directly into the gradient tensor
-            if args.lambda_tv_basis > 0.0:
-                print("args.lambda_tv_basis > 0.0")
+            if args.lambda_tv_basis > 0.0: #NOT USED
                 tv_basis = grid.tv_basis() #Seems irrelevant(?)
                 loss_tv_basis = tv_basis * args.lambda_tv_basis
                 loss_tv_basis.backward() #Tensor.backward()
@@ -598,18 +593,17 @@ while True:
             #        ' sh', torch.count_nonzero(grid.sparse_sh_grad_indexer).item())
 
             # Manual SGD/rmsprop step
-            if gstep_id >= args.lr_fg_begin_step:
-                print("gstep_id >= args.lr_fg_begin_step")
+            if gstep_id >= args.lr_fg_begin_step: #USED
                 grid.optim_density_step(lr_sigma, beta=args.rms_beta, optim=args.sigma_optim)
                 grid.optim_sh_step(lr_sh, beta=args.rms_beta, optim=args.sh_optim)
-            if grid.use_background:
-                print("use_background")
+            if grid.use_background: #USED
                 grid.optim_background_step(lr_sigma_bg, lr_color_bg, beta=args.rms_beta, optim=args.bg_optim)
-            if gstep_id >= args.lr_basis_begin_step:
-                print("gstep_id >= args.lr_basis_begin_step")
-                if grid.basis_type == svox2.BASIS_TYPE_3D_TEXTURE:
+            if gstep_id >= args.lr_basis_begin_step: #NOT USED (subconditions)
+                if grid.basis_type == svox2.BASIS_TYPE_3D_TEXTURE: #NOT USED
+                    print("grid.basis_type == svox2.BASIS_TYPE_3D_TEXTURE")
                     grid.optim_basis_step(lr_basis, beta=args.rms_beta, optim=args.basis_optim)
-                elif grid.basis_type == svox2.BASIS_TYPE_MLP:
+                elif grid.basis_type == svox2.BASIS_TYPE_MLP: #NOT USED
+                    print("grid.basis_type == svox2.BASIS_TYPE_MLP")
                     optim_basis_mlp.step()
                     optim_basis_mlp.zero_grad()
 
