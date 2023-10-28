@@ -1977,9 +1977,8 @@ class SparseGrid(nn.Module):
         assert (
             _C is not None and self.sh_data.is_cuda
         ), "CUDA extension is currently required for optimizers"
-
         indexer = self._maybe_convert_sparse_grad_indexer()
-        if optim == 'rmsprop':
+        if optim == 'rmsprop': #USED
             if (
                 self.density_rms is None
                 or self.density_rms.shape != self.density_data.shape
@@ -1996,7 +1995,7 @@ class SparseGrid(nn.Module):
                 epsilon,
                 -1e9,
                 lr
-            )
+            ) #optim_kernel
         elif optim == 'sgd':
             _C.sgd_step(
                 self.density_data.data,

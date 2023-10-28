@@ -594,7 +594,7 @@ while True:
 
             # Manual SGD/rmsprop step
             if gstep_id >= args.lr_fg_begin_step: #USED
-                grid.optim_density_step(lr_sigma, beta=args.rms_beta, optim=args.sigma_optim)
+                grid.optim_density_step(lr_sigma, beta=args.rms_beta, optim=args.sigma_optim) #RMSPROP
                 grid.optim_sh_step(lr_sh, beta=args.rms_beta, optim=args.sh_optim)
             if grid.use_background: #USED
                 grid.optim_background_step(lr_sigma_bg, lr_color_bg, beta=args.rms_beta, optim=args.bg_optim)
