@@ -1995,7 +1995,7 @@ class SparseGrid(nn.Module):
                 epsilon,
                 -1e9,
                 lr
-            ) #optim_kernel
+            ) #optim_kernel.cu
         elif optim == 'sgd':
             _C.sgd_step(
                 self.density_data.data,
