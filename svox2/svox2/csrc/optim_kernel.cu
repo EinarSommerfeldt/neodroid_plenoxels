@@ -18,7 +18,7 @@ __inline__ __device__ void rmsprop_once(
         float* __restrict__ ptr_grad,
         const float beta, const float lr, const float epsilon, float minval) {
     float rms = *ptr_rms;
-    rms = rms == 0.f ? _SQR(*ptr_grad) : lerp(_SQR(*ptr_grad), rms, beta);
+    rms = rms == 0.f ? _SQR(*ptr_grad) : lerp(_SQR(*ptr_grad), rms, beta); //lerp(T a, T b, T w) = (1-w) a + w b (cuda_util.cuh)
     *ptr_rms = rms;
     *ptr_data = fmaxf(*ptr_data - lr * (*ptr_grad) / (sqrtf(rms) + epsilon), minval);
     *ptr_grad = 0.f;

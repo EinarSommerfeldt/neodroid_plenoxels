@@ -515,16 +515,16 @@ torch::Tensor tv(torch::Tensor links, torch::Tensor data,
     return result;
 }
 
-void tv_grad(torch::Tensor links,
+void tv_grad(torch::Tensor links, //3D tensor with positions mapped to data indices
              torch::Tensor data,
-             int start_dim, int end_dim,
+             int start_dim, int end_dim, //0, 1
              float scale,
-             bool use_logalpha,
-             float logalpha_delta,
-             bool ignore_edge,
-             float ndc_coeffx,
-             float ndc_coeffy,
-             torch::Tensor grad_data) {
+             bool use_logalpha,     //args.tv_logalpha
+             float logalpha_delta,  //2.0
+             bool ignore_edge,      //False
+             float ndc_coeffx,      //dset.ndc_coeffs[0] (-1)
+             float ndc_coeffy,      //dset.ndc_coeffs[1] (1)
+             torch::Tensor grad_data) { //grad
     DEVICE_GUARD(data);
     CHECK_INPUT(data);
     CHECK_INPUT(links);

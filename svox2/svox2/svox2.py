@@ -1102,7 +1102,7 @@ class SparseGrid(nn.Module):
         grad_density, grad_sh, grad_basis, grad_bg = self._get_data_grads()
         rgb_out = torch.zeros_like(rgb_gt)
         basis_data : Optional[torch.Tensor] = None
-        if self.basis_type == BASIS_TYPE_MLP:
+        if self.basis_type == BASIS_TYPE_MLP: #NOT USED
             with torch.enable_grad():
                 basis_data = self._eval_basis_mlp(rays.dirs)
             grad_basis = torch.empty_like(basis_data)
@@ -1762,7 +1762,7 @@ class SparseGrid(nn.Module):
                     logalpha, logalpha_delta,
                     False,
                     ndc_coeffs[0], ndc_coeffs[1],
-                    grad)
+                    grad) #loss_kernel.cu
             self.sparse_grad_indexer : Optional[torch.Tensor] = None
 
     def inplace_tv_color_grad(
@@ -1995,7 +1995,7 @@ class SparseGrid(nn.Module):
                 epsilon,
                 -1e9,
                 lr
-            ) #optim_kernel.cu
+            ) #optim_kernel.cu 
         elif optim == 'sgd':
             _C.sgd_step(
                 self.density_data.data,
