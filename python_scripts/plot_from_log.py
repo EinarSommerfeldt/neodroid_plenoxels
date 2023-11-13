@@ -33,6 +33,7 @@ def get_stats(filename):
 #train_stats: {0: [[it_0, psnr_0], [it_1, psnr_1], ...], 1:...}
 def make_plots(eval_stats, train_stats):
     max_it = 0
+    epochs = len(train_stats)
     train_its = np.array([])
     train_psnrs = np.array([])
 
@@ -59,9 +60,16 @@ def make_plots(eval_stats, train_stats):
         epoch_psnrs = np.block([epoch_psnrs, psnr])
 
     plt.figure()
-    plt.plot(train_its, train_psnrs)
-    plt.plot(epoch_its, epoch_psnrs)
+    plt.plot(train_its, train_psnrs, label = "Train psnr")
+    plt.plot(epoch_its, epoch_psnrs, label = "Test psnr")
+
+    plt.ylabel('Psnr')
+    plt.xlabel('Iterations')
+    plt.title('Colmap C2W transform')
+
+    plt.xticks(np.arange(0, max_it*(epochs+1), step=max_it))
+    plt.legend()
     plt.show()
 
-eval_stats,train_stats = get_stats(r"C:\Users\einar\Desktop\neodroid_plenoxels\python_scripts\log")
+eval_stats,train_stats = get_stats(r"C:\Users\einarjso\neodroid_plenoxels\python_scripts\log")
 make_plots(eval_stats, train_stats)
