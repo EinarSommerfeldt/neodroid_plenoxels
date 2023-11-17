@@ -31,7 +31,7 @@ def get_stats(filename):
 
 #eval_stats: {-1 : [psnr,mse] , 0 : [psnr,mse], 1 : [psnr,mse], ....}
 #train_stats: {0: [[it_0, psnr_0], [it_1, psnr_1], ...], 1:...}
-def make_plots(eval_stats, train_stats):
+def make_plots(title, eval_stats, train_stats):
     max_it = 0
     epochs = len(train_stats)
     train_its = np.array([])
@@ -65,11 +65,11 @@ def make_plots(eval_stats, train_stats):
 
     plt.ylabel('Psnr')
     plt.xlabel('Iterations')
-    plt.title('Colmap C2W transform')
+    plt.title(title)
 
-    plt.xticks(np.arange(0, max_it*(epochs+1), step=max_it))
     plt.legend()
     plt.show()
-
-eval_stats,train_stats = get_stats(r"C:\Users\einarjso\neodroid_plenoxels\python_scripts\log")
-make_plots(eval_stats, train_stats)
+filepath = r"C:\Users\einarjso\OneDrive - NTNU\Semester 9\Neodroid project\logs\Lighthouse_colmapc2w"
+title = "Lighthouse Correct Transformation"
+eval_stats,train_stats = get_stats(filepath)
+make_plots(title, eval_stats, train_stats)
