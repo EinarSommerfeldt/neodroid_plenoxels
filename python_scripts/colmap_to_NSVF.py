@@ -30,6 +30,7 @@ def create_img_info(imagestxt_path):
             relevant = True
     return img_info
 
+#Quaternion to rotation matrix
 def qvec2rotmat(qvec):
     return np.array(
         [
@@ -51,6 +52,7 @@ def qvec2rotmat(qvec):
         ]
     )
 
+#Reads colmap data and outputs on correct pose format
 def populate_pose(output_folder, img_info, prefix):
     for n,i in enumerate(img_info):
         [IMAGE_ID, QW, QX, QY, QZ, TX, TY, TZ, CAMERA_ID, NAME] = i
