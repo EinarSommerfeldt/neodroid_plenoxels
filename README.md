@@ -23,6 +23,8 @@ pip install pyquaternion
 pip install rdflib
 ```
 
+Install cuda matching pytorch.version.cuda.
+
 In /svox2:
 ```
 pip install -e . --verbose
