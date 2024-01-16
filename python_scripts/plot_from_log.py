@@ -29,6 +29,27 @@ def get_stats(filename):
             train_stats[epoch].append([it,psnr])
     return eval_stats,train_stats
 
+"""
+eval_stats: {-1 : [psnr,mse] , 0 : [psnr,mse], 1 : [psnr,mse], ....}
+train_stats: {0: [[it_0, psnr_0], [it_1, psnr_1], ...], 1:...}
+
+returns eval_psnr_max, train_psnr_max
+"""
+def peak_psnr(eval_stats, train_stats):
+    train_psnrs = np.array([])
+    eval_psnrs = np.array([])
+
+    for epoch, values in train_stats.items():
+        train_epoch = np.array(values)
+        psnr = train_epoch[:,1]
+        train_psnrs = np.block([train_psnrs, psnr])
+
+    for epoch, values in eval_stats.items():
+        psnr = values[0]
+        eval_psnrs = np.block([eval_psnrs, psnr])
+
+    return eval_psnrs.max(), train_psnrs.max()
+
 #eval_stats: {-1 : [psnr,mse] , 0 : [psnr,mse], 1 : [psnr,mse], ....}
 #train_stats: {0: [[it_0, psnr_0], [it_1, psnr_1], ...], 1:...}
 def make_plots(title, eval_stats, train_stats):
@@ -49,27 +70,32 @@ def make_plots(title, eval_stats, train_stats):
         train_its = np.block([train_its, it])
         train_psnrs = np.block([train_psnrs, psnr])
     
-    epoch_its = np.array([])
-    epoch_psnrs = np.array([])
+    eval_its = np.array([])
+    eval_psnrs = np.array([])
 
     for epoch, values in eval_stats.items():
         it = (epoch+1)*max_it
         psnr = values[0]
 
-        epoch_its = np.block([epoch_its, it])
-        epoch_psnrs = np.block([epoch_psnrs, psnr])
+        eval_its = np.block([eval_its, it])
+        eval_psnrs = np.block([eval_psnrs, psnr])
 
     plt.figure()
     plt.plot(train_its, train_psnrs, label = "Train psnr")
-    plt.plot(epoch_its, epoch_psnrs, label = "Test psnr")
+    plt.plot(eval_its, eval_psnrs, label = "Test psnr")
 
-    plt.ylabel('Psnr')
+    plt.ylabel('PSNR')
     plt.xlabel('Iterations')
     plt.title(title)
 
     plt.legend()
     plt.show()
-filepath = r"C:\Users\einarjso\OneDrive - NTNU\Semester 9\Neodroid project\logs\Lighthouse_colmapc2w"
-title = "Lighthouse Correct Transformation"
+filepath = r"C:\Users\einar\OneDrive - NTNU\Semester 9\neodroid_plenoxels\svox2\opt\ckpt\fruit_fix\log"
+title = "Fruit Weight Decay"
 eval_stats,train_stats = get_stats(filepath)
-make_plots(title, eval_stats, train_stats)
+
+eval_psnr_max, train_psnr_max = peak_psnr(eval_stats, train_stats)
+print("peak eval psnr: ", eval_psnr_max)
+print("peak train psnr: ", train_psnr_max)
+
+#make_plots(title, eval_stats, train_stats)
