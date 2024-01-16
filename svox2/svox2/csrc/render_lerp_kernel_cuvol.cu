@@ -1086,7 +1086,7 @@ void volume_render_cuvol_fused(
     const auto Q = rays.origins.size(0);
 
     bool use_background = grid.background_links.defined() &&
-                          grid.background_links.size(0) > 0;
+                          grid.background_links.size(0) > 0; //true?(E)
     bool need_log_transmit = use_background || beta_loss > 0.f;
     torch::Tensor log_transmit, accum;
     if (need_log_transmit) {
@@ -1112,6 +1112,7 @@ void volume_render_cuvol_fused(
                 rays,
                 opt,
                 log_transmit.data_ptr<float>(),
+                //Output? (E)
                 rgb_out.packed_accessor32<float, 2, torch::RestrictPtrTraits>());
     }
 
