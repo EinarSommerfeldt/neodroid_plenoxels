@@ -575,7 +575,7 @@ struct ConcentricSpheresIntersector {
     float q2a, qb, f;
 };
 
-__device__ __inline__ void ray_find_bounds(
+__device__ __inline__ void ray_find_bounds( //Finds tmin and tmax of ray
         SingleRaySpec& __restrict__ ray,
         const PackedSparseGridSpec& __restrict__ grid,
         const RenderOptions& __restrict__ opt,

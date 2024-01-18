@@ -34,9 +34,9 @@ __device__ __inline__ void trace_ray_cuvol(
         uint32_t lane_id,
         float* __restrict__ sphfunc_val,
         WarpReducef::TempStorage& __restrict__ temp_storage,
-        float* __restrict__ out,
+        float* __restrict__ out, // ray color? (E)
         float* __restrict__ out_log_transmit) {
-    const uint32_t lane_colorgrp_id = lane_id % grid.basis_dim;
+    const uint32_t lane_colorgrp_id = lane_id % grid.basis_dim; //grid.basis_dim = 9
     const uint32_t lane_colorgrp = lane_id / grid.basis_dim;
 
     if (ray.tmin > ray.tmax) {
@@ -615,10 +615,10 @@ __global__ void render_ray_kernel(
         RenderOptions opt,
         torch::PackedTensorAccessor32<float, 2, torch::RestrictPtrTraits> out,
         float* __restrict__ log_transmit_out = nullptr) {
-    CUDA_GET_THREAD_ID(tid, int(rays.origins.size(0)) * WARP_SIZE);
-    const int ray_id = tid >> 5;
-    const int ray_blk_id = threadIdx.x >> 5;
-    const int lane_id = threadIdx.x & 0x1F;
+    CUDA_GET_THREAD_ID(tid, int(rays.origins.size(0)) * WARP_SIZE); //Global thread id? (E)
+    const int ray_id = tid >> 5;                //Actual global ray id
+    const int ray_blk_id = threadIdx.x >> 5;    //Local ray id, threadIdx.x is threadid local to block
+    const int lane_id = threadIdx.x & 0x1F;     //What is lane_id? (E) Spherical harmonic coefficient id
 
     if (lane_id >= grid.sh_data_dim)  // Bad, but currently the best way due to coalesced memory access
         return;
@@ -629,18 +629,19 @@ __global__ void render_ray_kernel(
         TRACE_RAY_CUDA_RAYS_PER_BLOCK];
     ray_spec[ray_blk_id].set(rays.origins[ray_id].data(),
             rays.dirs[ray_id].data());
-    calc_sphfunc(grid, lane_id,
+    calc_sphfunc(grid, lane_id,             // render_util.cuh 365
                  ray_id,
                  ray_spec[ray_blk_id].dir,
-                 sphfunc_val[ray_blk_id]);
-    ray_find_bounds(ray_spec[ray_blk_id], grid, opt, ray_id);
-    __syncwarp((1U << grid.sh_data_dim) - 1);
+                 sphfunc_val[ray_blk_id] //Output (E)
+                 );
+    ray_find_bounds(ray_spec[ray_blk_id], grid, opt, ray_id); // render_util.cuh 578, sets ray_spec tmin and tmax
+    __syncwarp((1U << grid.sh_data_dim) - 1); // "synchronize threads in a warp and provide a memory fence."
 
-    trace_ray_cuvol(
+    trace_ray_cuvol( //Traces ray for each SH coefficient
         grid,
         ray_spec[ray_blk_id],
         opt,
-        lane_id,
+        lane_id, //SH coefficient
         sphfunc_val[ray_blk_id],
         temp_storage[ray_blk_id],
         out[ray_id].data(),
