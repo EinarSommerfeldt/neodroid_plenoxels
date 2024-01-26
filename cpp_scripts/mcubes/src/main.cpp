@@ -9,9 +9,11 @@
 
 #include <math.h>
 
+
+
 #include "mcubes.h"
 #include "cuboid.h"
-
+#include "utils.h"
 
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
@@ -19,6 +21,9 @@ using Eigen::VectorXd;
 
 int main()
 {
-    Cuboid c{0,0,0,1,1,1};
-    std::cout << c.to_vertices();
+    Eigen::MatrixXd K = readMatrix("C:/Users/einarjso/neodroid_plenoxels/python_scripts/roi/data/K.txt");
+    std::string path = "C:/Users/einarjso/neodroid_plenoxels/python_scripts/roi/data/pose";
+    std::vector<Eigen::Matrix<double, 4, 4>> Tvec = read_Tvec(path);
+
+    marching_cubes(K, Tvec, )
 }

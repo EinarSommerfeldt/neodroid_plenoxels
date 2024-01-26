@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Eigen/Dense>
-#include <Eigen/CXX11/Tensor>
 
 #include <vector>
 
