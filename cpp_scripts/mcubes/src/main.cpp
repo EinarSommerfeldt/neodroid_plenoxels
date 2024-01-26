@@ -6,17 +6,19 @@
 #include <opencv2/highgui.hpp>
 
 #include <Eigen/Dense>
- 
+
+#include <math.h>
+
+#include "mcubes.h"
+#include "cuboid.h"
+
+
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
 
-using namespace cv;
+
 int main()
 {
-    MatrixXd m = MatrixXd::Random(3,3);
-    m = (m + MatrixXd::Constant(3,3,1.2)) * 50;
-    std::cout << "m =" << std::endl << m << std::endl;
-    VectorXd v(3);
-    v << 1, 2, 3;
-    std::cout << "m * v =" << std::endl << m * v << std::endl;
+    Cuboid c{0,0,0,1,1,1};
+    std::cout << c.to_vertices();
 }
