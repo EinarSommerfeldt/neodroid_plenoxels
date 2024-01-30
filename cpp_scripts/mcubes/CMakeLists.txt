@@ -10,3 +10,4 @@ add_executable(${PROJECT_NAME} src/main.cpp src/mcubes.cpp)
 
 target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS})
 target_include_directories(${PROJECT_NAME} PRIVATE "C:/Users/einarjso/eigen-3.4.0")
+target_include_directories(${PROJECT_NAME} PRIVATE "C:/Users/einarjso/eigen-3.4.0/unsupported")

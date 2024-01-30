@@ -15,9 +15,6 @@
 #include "cuboid.h"
 #include "utils.h"
 
-using Eigen::MatrixXd;
-using Eigen::VectorXd;
-
 
 int main()
 {
@@ -25,5 +22,7 @@ int main()
     std::string path = "C:/Users/einarjso/neodroid_plenoxels/python_scripts/roi/data/pose";
     std::vector<Eigen::Matrix<double, 4, 4>> Tvec = read_Tvec(path);
 
-    marching_cubes(K, Tvec, )
+    double s = 0.1;
+    Cuboid cube{0.2,0.3,1.2,s*3,s,s*2};
+    marching_cubes(K, Tvec, cube,0.01, 1008, 756);
 }

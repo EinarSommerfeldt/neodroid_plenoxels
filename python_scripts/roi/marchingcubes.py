@@ -46,9 +46,9 @@ def marchingcubes(K, T_list, cube: Cuboid, step_length: float):
             small_cube.y = cube.y + h*step_length
             for d in range(its):
                 small_cube.z = cube.z + d*step_length
-                cube_world = cube.to_vertices()
+                cube_world = small_cube.to_vertices()
                 for T in T_list:
-                    cube_cam = T@cube_world # TODO: Should this be inverted? probs yes
+                    cube_cam = T@cube_world # TODO: Should this be inverted? probs yes. They have already been inverted once!
                     U = project(K, cube_cam)
                     break
     return 0

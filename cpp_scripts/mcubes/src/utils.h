@@ -7,12 +7,11 @@
 #include <filesystem>
 
 using namespace std;
-using namespace Eigen;
 namespace fs = std::filesystem;
 
 
 
-MatrixXd readMatrix(std::string filename){
+Eigen::MatrixXd readMatrix(std::string filename){
     int cols = 0, rows = 0;
     double buff[((int) 1e3)];
 
@@ -43,7 +42,7 @@ MatrixXd readMatrix(std::string filename){
     rows--;
 
     // Populate matrix with numbers.
-    MatrixXd result(rows,cols);
+    Eigen::MatrixXd result(rows,cols);
     for (int i = 0; i < rows; i++)
         for (int j = 0; j < cols; j++)
             result(i,j) = buff[ cols*i+j ];
