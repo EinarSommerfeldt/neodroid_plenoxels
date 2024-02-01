@@ -7,6 +7,8 @@
 #include <iostream>
 #include <filesystem>
 
+#include "cuboid.h"
+
 using namespace std;
 namespace fs = std::filesystem;
 
@@ -58,4 +60,40 @@ std::vector<Eigen::Matrix<double, 4, 4>> read_Tvec(std::string folderpath) {
     }
         
     return Tvec;
+}
+
+template <typename T, int h, int w>
+void writeMatrixToFile(std::string filepath, Eigen::Matrix<T,h,w> matrix) {
+    std::ofstream file(filepath);
+    if (file.is_open())
+    {
+        file << matrix;
+    } else {
+        std::cout << "Failed to write Matrix to filepath " << filepath << "\n";
+    }
+}
+
+template <typename T>
+void write3DTensorToFile(std::string filepath, Eigen::Tensor<T,3> tensor) {
+    std::ofstream file(filepath);
+    if (file.is_open())
+    {
+        file << tensor;
+    } else {
+        std::cout << "Failed to write Tensor to filepath " << filepath << "\n";
+    }
+}
+
+void writeBboxToFile(std::string filepath, Cuboid cuboid, double step_size) {
+    std::ofstream file(filepath);
+    if (file.is_open())
+    {
+        file << cuboid.x << " " << cuboid.y << " " << cuboid.z << " " 
+        << cuboid.x + cuboid.width << " "
+        << cuboid.y + cuboid.height << " "
+        << cuboid.z + cuboid.depth << " " 
+        << step_size;
+    } else {
+        std::cout << "Failed to open  " << filepath << "\n";
+    }
 }

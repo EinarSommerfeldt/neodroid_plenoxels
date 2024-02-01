@@ -38,21 +38,21 @@ Cuboid find_bbox(std::vector<Eigen::Matrix<double, 4, 4>> T_vec){
 Eigen::Tensor<uint8_t,3> marching_cubes(
     Eigen::Matrix<double, 3, 3> K,
     std::vector<Eigen::Matrix<double, 4, 4>> T_vec,
-    Cuboid volume,
+    Cuboid bbox,
     double step_length,
     int img_width,
     int img_height
 ) {
-    int w_its = static_cast<int>(std::ceil(volume.width/step_length));
-    int h_its = static_cast<int>(std::ceil(volume.height/step_length));
-    int d_its = static_cast<int>(std::ceil(volume.depth/step_length));
+    int w_its = static_cast<int>(std::ceil(bbox.width/step_length));
+    int h_its = static_cast<int>(std::ceil(bbox.height/step_length));
+    int d_its = static_cast<int>(std::ceil(bbox.depth/step_length));
 
     std::cout << "bbox cubes: " << w_its <<" " << h_its <<" "<< d_its <<"\n";
 
     Eigen::Tensor<uint8_t, 3> mask(w_its, h_its, d_its);
     mask.setZero();
 
-    Cuboid cube = volume;
+    Cuboid cube = bbox;
     cube.width = step_length;
     cube.height = step_length;
     cube.depth = step_length;
