@@ -3,7 +3,7 @@
 #SBATCH --account=ie-idi # READ THIS TO FIND YOUR ACCOUNT: https://www.hpc.ntnu.no/idun/getting-started-on-idun/accounting/
 #SBATCH --mem=64GB # Total memory you need. Most DL jobs should do fine with 64GB.
 #SBATCH --nodes=1 # Number of nodes. Leave this to 1 as long as you're not running multi-node/multi-gpu training
-#SBATCH --cpus-per-task=4 # Number of CPU cores required. Most V100 nodes has 4 CPU cores per GPU, so to maximize usage of the nodes, leave it to 4 (unless you know that your specific node has more than 4 cores/GPU).
+#SBATCH --ntasks-per-node=1    # 1 mpi process each node
 #SBATCH --job-name=plenoxels_job # Set this to whatever you want
 #SBATCH --output=/cluster/home/einarjso/neodroid_plenoxels/output/JOB%j.out# The output file. NOTE! The output directory (/cluster/home/haakohu/ in this case)  has to exist before you submit the job!
 #SBATCH --time=8:00:00 # Maximum running time of your job.
