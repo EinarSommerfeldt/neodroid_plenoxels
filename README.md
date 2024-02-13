@@ -38,7 +38,7 @@ In /svox2:
 pip install -e . --verbose
 ```
 
-
+# Training
 
 To train: (in svox2/opt )
 ```
