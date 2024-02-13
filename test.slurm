@@ -26,4 +26,4 @@ module load PyTorch/1.12.1-foss-2022a-CUDA-11.7.0
 
 
 cd /cluster/home/einarjso/neodroid_plenoxels/svox2/opt # CD to the folder containing your files on the server
-./launch_neodroid.sh opt_neodroid  /home/einarjso/fruit_train -c configs/neodroid/neodroid.json
+./launch_neodroid.sh opt_neodroid 1 /home/einarjso/fruit_train -c configs/neodroid/neodroid.json
