@@ -1,5 +1,5 @@
 #!/bin/sh
-#SBATCH --partition=CPUQ # CHANGE THIS TO CPUQ IF YOU DON'T NEED GPUs!!
+#SBATCH --partition=GPUQ # CHANGE THIS TO CPUQ IF YOU DON'T NEED GPUs!!
 #SBATCH --account=ie-idi # READ THIS TO FIND YOUR ACCOUNT: https://www.hpc.ntnu.no/idun/getting-started-on-idun/accounting/
 #SBATCH --mem=64GB # Total memory you need. Most DL jobs should do fine with 64GB.
 #SBATCH --nodes=1 # Number of nodes. Leave this to 1 as long as you're not running multi-node/multi-gpu training
