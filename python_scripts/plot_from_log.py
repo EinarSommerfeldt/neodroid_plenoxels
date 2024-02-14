@@ -1,6 +1,7 @@
 import json
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 
 def get_stats(filename):
     f = open(filename, "r", encoding="utf8")
@@ -81,8 +82,8 @@ def make_plots(title, eval_stats, train_stats):
         eval_psnrs = np.block([eval_psnrs, psnr])
 
     plt.figure()
-    plt.plot(train_its, train_psnrs, label = "Train psnr")
-    plt.plot(eval_its, eval_psnrs, label = "Test psnr")
+    plt.plot(train_its, train_psnrs, label = "Train PSNR")
+    plt.plot(eval_its, eval_psnrs, label = "Validation PSNR")
 
     plt.ylabel('PSNR')
     plt.xlabel('Iterations')
@@ -90,12 +91,65 @@ def make_plots(title, eval_stats, train_stats):
 
     plt.legend()
     plt.show()
-filepath = r"C:\Users\einar\OneDrive - NTNU\Semester 9\neodroid_plenoxels\svox2\opt\ckpt\fruit_fix\log"
-title = "Fruit Weight Decay"
-eval_stats,train_stats = get_stats(filepath)
 
-eval_psnr_max, train_psnr_max = peak_psnr(eval_stats, train_stats)
-print("peak eval psnr: ", eval_psnr_max)
-print("peak train psnr: ", train_psnr_max)
+"""
+input_dict: {"label_0": "path_to_log_0", "label_1": "path_to_log_1", ...}
+"""
+def plot_evals_together(input_dict, title = ""):
 
-#make_plots(title, eval_stats, train_stats)
+    plt.figure()
+
+    plt.ylabel('PSNR')
+    plt.xlabel('Iterations')
+    plt.title(title)
+
+    for label, filepath in input_dict.items():
+        eval_stats,train_stats = get_stats(filepath)
+        max_it = 0
+
+        train_its = np.array([])
+        train_psnrs = np.array([])
+        eval_its = np.array([])
+        eval_psnrs = np.array([])
+
+        for epoch, values in train_stats.items():
+            train_epoch = np.array(values)
+            it = train_epoch[:,0]
+            psnr = train_epoch[:,1]
+
+            if max_it == 0:
+                max_it = it[-1]
+                break
+
+        for epoch, values in eval_stats.items():
+            it = (epoch+1)*max_it
+            psnr = values[0]
+
+            eval_its = np.block([eval_its, it])
+            eval_psnrs = np.block([eval_psnrs, psnr])
+        
+        #plt.plot(train_its, train_psnrs, label = "Train psnr")
+        plt.plot(eval_its, eval_psnrs, label = label)
+
+    plt.legend()
+    plt.show()
+
+
+
+
+
+
+log_folder = r"C:\Users\einar\OneDrive - NTNU\Semester 9\Neodroid project\logs"
+input_dict = {"Wrong transformation": log_folder+os.sep+"lighthouse_wrong_ds", 
+             "Correct transformation": log_folder+os.sep+"Lighthouse_colmapc2w"}
+
+input_dict = {"Basic": log_folder+os.sep+"colmapc2w_good_example", 
+             "Nearclip": log_folder+os.sep+"fruit_colmapc2w_nearclip",
+             "Nearclip + Weight Decay": log_folder+os.sep+"fruit_fix",}
+#plot_evals_together(input_dict, "Fruit Test PSNR")
+
+eval_stats, train_stats = get_stats(log_folder+os.sep+"lego_test")
+#make_plots("Lego stats", eval_stats, train_stats)
+
+eval_max, train_max = peak_psnr(eval_stats, train_stats)
+print(eval_max)
