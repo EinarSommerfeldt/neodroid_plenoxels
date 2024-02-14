@@ -1,5 +1,13 @@
 # neodroid_plenoxels
 
+# Idun setup:
+```
+module load PyTorch/1.12.1-foss-2022a-CUDA-11.7.0
+```
+In /svox2:
+```
+pip install -e . --verbose
+```
 
 # Environment Setup:
 
@@ -23,12 +31,14 @@ pip install pyquaternion
 pip install rdflib
 ```
 
+Install cuda matching torch.version.cuda
+
 In /svox2:
 ```
 pip install -e . --verbose
 ```
 
-
+# Training
 
 To train: (in svox2/opt )
 ```

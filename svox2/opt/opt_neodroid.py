@@ -499,7 +499,7 @@ while True:
             rays = svox2.Rays(batch_origins, batch_dirs)
 
             #  with Timing("volrend_fused"):
-            rgb_pred = grid.volume_render_fused(rays, rgb_gt,
+            rgb_pred = grid.volume_render_fused(rays, rgb_gt, #svox.py 1072
                     beta_loss=args.lambda_beta,
                     sparsity_loss=args.lambda_sparsity,
                     randomize=args.enable_random) #Generates gradients

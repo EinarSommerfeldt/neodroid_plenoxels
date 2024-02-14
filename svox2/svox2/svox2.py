@@ -1102,7 +1102,7 @@ class SparseGrid(nn.Module):
         grad_density, grad_sh, grad_basis, grad_bg = self._get_data_grads()
         rgb_out = torch.zeros_like(rgb_gt)
         basis_data : Optional[torch.Tensor] = None
-        if self.basis_type == BASIS_TYPE_MLP:
+        if self.basis_type == BASIS_TYPE_MLP: #false?
             with torch.enable_grad():
                 basis_data = self._eval_basis_mlp(rays.dirs)
             grad_basis = torch.empty_like(basis_data)
@@ -1122,7 +1122,7 @@ class SparseGrid(nn.Module):
                     dtype=torch.bool, device=self.background_data.device)
             grad_holder.mask_background_out = self.sparse_background_indexer
 
-        cu_fn = _C.__dict__[f"volume_render_{self.opt.backend}_fused"]
+        cu_fn = _C.__dict__[f"volume_render_{self.opt.backend}_fused"] #//TODO: Assuming volume_render_cuvol_fused, check
         #  with utils.Timing("actual_render"):
         cu_fn(
             self._to_cpp(replace_basis_data=basis_data),
