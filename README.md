@@ -3,6 +3,10 @@
 # Idun setup:
 ```
 module load PyTorch/1.12.1-foss-2022a-CUDA-11.7.0
+pip install tqdm
+pip install imageio[ffmpeg]
+pip install pyquaternion
+pip install opencv-python
 ```
 In /svox2:
 ```
