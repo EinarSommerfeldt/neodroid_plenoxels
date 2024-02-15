@@ -8,6 +8,7 @@ pip install imageio[ffmpeg]
 pip install pyquaternion
 pip install opencv-python
 pip install matplotlib
+pip install tensorboard
 ```
 In /svox2:
 ```
