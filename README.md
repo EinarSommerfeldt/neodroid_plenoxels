@@ -7,6 +7,7 @@ pip install tqdm
 pip install imageio[ffmpeg]
 pip install pyquaternion
 pip install opencv-python
+pip install matplotlib
 ```
 In /svox2:
 ```
