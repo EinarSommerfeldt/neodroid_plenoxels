@@ -1,14 +1,12 @@
 #!/bin/sh
 #SBATCH --partition=GPUQ # CHANGE THIS TO CPUQ IF YOU DON'T NEED GPUs!!
 #SBATCH --account=ie-idi # READ THIS TO FIND YOUR ACCOUNT: https://www.hpc.ntnu.no/idun/getting-started-on-idun/accounting/
-#SBATCH --mem=64GB # Total memory you need. Most DL jobs should do fine with 64GB.
 #SBATCH --nodes=1 # Number of nodes. Leave this to 1 as long as you're not running multi-node/multi-gpu training
-#SBATCH --ntasks-per-node=1    # 1 mpi process each node
-#SBATCH --job-name=plenoxels_job # Set this to whatever you want
-#SBATCH --output=/cluster/home/einarjso/neodroid_plenoxels/output/JOB%j.out# The output file. NOTE! The output directory (/cluster/home/haakohu/ in this case)  has to exist before you submit the job!
-#SBATCH --time=8:00:00 # Maximum running time of your job.
-#SBATCH --export=ALL # Export all environment variables.
-#SBATCH --gres=gpu:V100:1 # GPU type and number of GPUs.
+#SBATCH --time=00:30:00 # Maximum running time of your job.
+#SBATCH --gres=gpu:v100:1 # GPU type and number of GPUs.
+#SBATCH --mem=8G
+#SBATCH --job-name=plenoxels_job
+#SBATCH --output=/cluster/home/einarjso/neodroid_plenoxels/output/JOB%j.out
 echo "we are running from this directory: $SLURM_SUBMIT_DIR"
 echo " the name of the job is: $SLURM_JOB_NAME"
 echo "Th job ID is $SLURM_JOB_ID"
@@ -25,5 +23,5 @@ module purge
 module load PyTorch/1.12.1-foss-2022a-CUDA-11.7.0
 
 
-cd /cluster/home/einarjso/neodroid_plenoxels/svox2/opt # CD to the folder containing your files on the server
-./launch_neodroid.sh opt_neodroid 1 /home/einarjso/fruit_train -c configs/neodroid/neodroid.json
+cd /cluster/home/einarjso/neodroid_plenoxels/svox2/opt
+./launch_neodroid.sh opt_neodroid 0 /cluster/home/einarjso/neodroid_datasets/fruit_NSVF_4_train -c configs/neodroid/neodroid.json
