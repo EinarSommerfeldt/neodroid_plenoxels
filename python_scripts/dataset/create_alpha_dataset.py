@@ -3,10 +3,8 @@ import numpy as np
 import random
 import json
 import sys
-import shutil
-from PIL import Image
+from PIL import Image, ExifTags
 import cv2 as cv
-from scipy.spatial.transform import Rotation 
 
 SCALING_FACTOR = 4 #Images will be downscaled by SCALING_FACTOR
 
@@ -57,13 +55,31 @@ def create_image(pose, n, view_dict, K, DC, prefix):
     
     orig_img = Image.open(img_path)
     resized_img = orig_img.resize((orig_img.size[0]//SCALING_FACTOR, orig_img.size[1]//SCALING_FACTOR))
+    
+    #Find correct tag 
+    for orientation in ExifTags.TAGS.keys():
+        if ExifTags.TAGS[orientation]=='Orientation':
+            break
+    
+    exif = resized_img.getexif()
+
+    #Rotate images correctly
+    if exif[orientation] == 6:
+        resized_img=resized_img.rotate(90, expand=True)
+    elif exif[orientation] == 8:
+        resized_img=resized_img.rotate(270, expand=True)
+
     output_path = output_folder+f"/rgb/{prefix}{n:0=4}.png"
     resized_img.save(output_path)
 
     #Undistort image
     I = cv.imread(output_path)
     out = cv.undistort(I, K, DC)
-    cv.imwrite(output_path, out)
+    #Add alpha mask
+    rgba = cv.cvtColor(out, cv.COLOR_BGR2BGRA)
+    mask = (out != 0).any(axis=2)
+    rgba[:, :, 3] = mask*255
+    cv.imwrite(output_path, rgba)
 
 def create_rgb_and_pose(pose_list:list, view_dict:dict, calibration_folder, image_folder, output_folder):
     random.shuffle(pose_list)
@@ -126,10 +142,10 @@ def create_NSFV(CameraInfo_path, ConvertSFMFormat_path, calibration_folder, outp
     
 
 
-image_folder = r"/home/einarjso/Lighthouse"
-CameraInfo_path = r"/home/einarjso/Lighthouse/cameraInit.sfm"
-ConvertSFMFormat_path = r"/home/einarjso/Lighthouse/sfm.json"
-calibration_folder = r"/home/einarjso/Lighthouse"
+image_folder = r"C:\Users\einar\Desktop\neodroid_datasets\fruit1"
+CameraInfo_path = r"C:\Users\einar\Desktop\neodroid_plenoxels\python_scripts\json\cameraInit.sfm"
+ConvertSFMFormat_path = r"C:\Users\einar\Desktop\neodroid_plenoxels\python_scripts\json\sfm.json"
+calibration_folder = r"C:\Users\einar\Desktop\neodroid_plenoxels\camera_calibration\calibration"
 
-output_folder = r"/home/einarjso/Lighthouse_colmap"
+output_folder = r"C:\Users\einar\Desktop\fruit_alpha"
 create_NSFV(CameraInfo_path, ConvertSFMFormat_path,calibration_folder, output_folder)
