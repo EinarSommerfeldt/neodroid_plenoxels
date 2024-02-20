@@ -21,3 +21,7 @@ class Cuboid():
         [1, 1, 1, 1, 1, 1, 1, 1]])
         cube_world = translate(self.x, self.y, self.z)@rotate_z(np.pi)@cube_vertices
         return cube_world
+    
+    def print(self):
+        print(f"Cuboid, x:{self.x:.3f}, y:{self.y:.3f}, z:{self.z:.3f}"
+              f", width:{self.width:.3f}, height:{self.height:.3f}, depth:{self.depth:.3f}")
