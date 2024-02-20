@@ -3,7 +3,7 @@ import numpy as np
 import os
 import random
 import cv2 as cv
-from PIL import Image
+from PIL import Image, ExifTags
 
 SCALING_FACTOR = 2 #Images will be downscaled by SCALING_FACTOR
 DATASET_SPLIT = np.array([100,10,10])
@@ -76,13 +76,32 @@ def populate_rgb(output_folder, image_folder, calibration_folder, img_info, pref
         
         orig_img = Image.open(img_path)
         resized_img = orig_img.resize((orig_img.size[0]//SCALING_FACTOR, orig_img.size[1]//SCALING_FACTOR))
-        output_path = output_folder+f"/rgb/{prefix}{n:0=4}." + img_path.rsplit(".",1)[1].lower()
+        #Find correct tag 
+        for orientation in ExifTags.TAGS.keys():
+            if ExifTags.TAGS[orientation]=='Orientation':
+                break
+        
+        exif = resized_img.getexif()
+
+        #Rotate images correctly
+        if exif[orientation] == 6:
+            resized_img=resized_img.rotate(90, expand=True)
+        elif exif[orientation] == 8:
+            resized_img=resized_img.rotate(270, expand=True)
+
+        output_path = output_folder+f"/rgb/{prefix}{n:0=4}.png"
         resized_img.save(output_path)
+
+        
 
         #Undistort image
         I = cv.imread(output_path)
         out = cv.undistort(I, K, DC)
-        cv.imwrite(output_path, out)
+        #Add alpha mask
+        rgba = cv.cvtColor(out, cv.COLOR_BGR2BGRA)
+        mask = (out != 0).any(axis=2)
+        rgba[:, :, 3] = mask*255
+        cv.imwrite(output_path, rgba)
     return 1
 
 #Set bbox as space occupied by cameras
@@ -148,9 +167,9 @@ def colmap_to_NSVF(output_folder, image_folder, calibration_folder, imagestxt_pa
     return 1
 
 
-imagestxt_path = r"/home/einarjso/Lighthouse_colmap/images.txt"
-image_folder = r"/home/einarjso/Lighthouse_colmap/images"
-calibration_folder = r"/home/einarjso/Lighthouse"
+imagestxt_path = r"C:\Users\einar\Desktop\colmap_notes\images.txt"
+image_folder = r"C:\Users\einar\Desktop\neodroid_datasets\fruit1"
+calibration_folder = r"C:\Users\einar\Desktop\neodroid_plenoxels\camera_calibration\calibration"
 
-output_folder = r"/home/einarjso/Lighthouse_colmap_NSVF_c2w"
+output_folder = r"C:\Users\einar\Desktop\fruit_colmap_notes"
 colmap_to_NSVF(output_folder, image_folder, calibration_folder, imagestxt_path)
