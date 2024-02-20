@@ -1,3 +1,5 @@
 .vscode/
 cal2/
 output/
+svox2/svox2/csrc.cpython-310-x86_64-linux-gnu.so
+svox2/build/
