@@ -93,15 +93,16 @@ def populate_rgb(output_folder, image_folder, calibration_folder, img_info, pref
         resized_img.save(output_path)
 
         
-
         #Undistort image
         I = cv.imread(output_path)
         out = cv.undistort(I, K, DC)
         #Add alpha mask
+        """
         rgba = cv.cvtColor(out, cv.COLOR_BGR2BGRA)
         mask = (out != 0).any(axis=2)
         rgba[:, :, 3] = mask*255
-        cv.imwrite(output_path, rgba)
+        """
+        cv.imwrite(output_path, out)
     return 1
 
 #Set bbox as space occupied by cameras

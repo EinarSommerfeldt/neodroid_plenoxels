@@ -49,13 +49,8 @@ def convert_dset(output_folder, pose_folder, image_folder, K_path):
         
         mask = roi_mask(T, K, image.shape[0], image.shape[1], cuboid)
         image = cv.bitwise_and(image, image, mask=mask)
-
-        if image.shape[2] == 3:
-            #Add alpha mask
-            rgba = cv.cvtColor(image, cv.COLOR_BGR2BGRA)
-            rgba[:, :, 3] = mask
-
-        cv.imwrite(output_folder + os.sep + entry_name + ".png", rgba)
+        image = image + (255-mask)
+        cv.imwrite(output_folder + os.sep + entry_name + ".png", image)
     return 0
 
 def proj_points(name_list, point_filepath, pose_folder, image_folder, K_path):
