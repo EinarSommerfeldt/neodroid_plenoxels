@@ -5,7 +5,7 @@ import random
 import cv2 as cv
 from PIL import Image, ExifTags
 
-SCALING_FACTOR = 2 #Images will be downscaled by SCALING_FACTOR
+SCALING_FACTOR = 4 #Images will be downscaled by SCALING_FACTOR
 DATASET_SPLIT = np.array([100,10,10])
 
 # Image list with two lines of data per image:
