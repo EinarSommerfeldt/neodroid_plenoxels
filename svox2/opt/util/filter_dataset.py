@@ -45,10 +45,11 @@ class FilterDataset(DatasetBase):
         yy = (yy - self.intrins.cy) / self.intrins.fy #Distance from image center along y-axis in mm(?)
         zz = torch.ones_like(xx)
         dirs = torch.stack((xx, yy, zz), dim=-1)  # OpenCV convention, tensor([[[-0.5928(x), -0.4475(y),  1.0000(z)],...
-        dirs /= torch.norm(dirs, dim=-1, keepdim=True)
-        dirs = dirs.reshape(1, -1, 3, 1)
+        dirs /= torch.norm(dirs, dim=-1, keepdim=True) #[h, w, 3]
+        dirs = dirs.reshape(1, -1, 3, 1) #[1, h*w, 3, 1]
         del xx, yy, zz
-        dirs = (self.c2w[:, None, :3, :3] @ dirs)[..., 0] #Dirs rotated to world frame [train_size, h*w, 3]
+        #c2w are all camera matrices, multiplying dirs
+        dirs = (self.c2w[:, None, :3, :3] @ dirs)[..., 0] #Dirs rotated to world frame [train_size, h*w, 3] 
 
         if factor != 1:
             gt = F.interpolate(
@@ -99,7 +100,7 @@ class FilterDataset(DatasetBase):
 
         split_name = split if split != "test_train" else "train"
 
-        print("LOAD NSVF DATA", root, 'split', split)
+        print("LOAD FILTERED NSVF DATA", root, 'split', split)
 
         self.split = split
 
