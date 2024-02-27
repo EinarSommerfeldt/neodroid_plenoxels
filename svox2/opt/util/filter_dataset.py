@@ -218,11 +218,13 @@ class FilterDataset(DatasetBase):
 
         self.gt = torch.stack(all_gt).double() / 255.0
         if self.gt.size(-1) == 4:
+            print("Applying alpha channel")
             if white_bkgd:
                 # Apply alpha channel
                 self.gt = self.gt[..., :3] * self.gt[..., 3:] + (1.0 - self.gt[..., 3:])
             else:
                 self.gt = self.gt[..., :3]
+            print("Alpha channel applied")
         self.gt = self.gt.float()
 
         assert full_size[0] > 0 and full_size[1] > 0, "Empty images"
