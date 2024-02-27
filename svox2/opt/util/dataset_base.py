@@ -49,14 +49,12 @@ class DatasetBase:
         yy = (yy - self.intrins.cy) / self.intrins.fy #Distance from image center along y-axis in mm(?)
         zz = torch.ones_like(xx)
         dirs = torch.stack((xx, yy, zz), dim=-1)  # OpenCV convention, tensor([[[-0.5928(x), -0.4475(y),  1.0000(z)],...
-        print("dirs = torch.stack((xx, yy, zz), dim=-1): ", dirs.shape)
         dirs /= torch.norm(dirs, dim=-1, keepdim=True)
-        print("ddirs /= torch.norm(dirs, dim=-1, keepdim=True): ", dirs.shape)
+
         dirs = dirs.reshape(1, -1, 3, 1)
-        print("dirs = dirs.reshape(1, -1, 3, 1): ", dirs.shape)
         del xx, yy, zz
+        
         dirs = (self.c2w[:, None, :3, :3] @ dirs)[..., 0] #Dirs rotated to world frame [train_size, h*w, 3]
-        print("dirs = (self.c2w[:, None, :3, :3] @ dirs)[..., 0]: ", dirs.shape)
         if factor != 1:
             gt = F.interpolate(
                 self.gt.permute([0, 3, 1, 2]), size=(self.h, self.w), mode="area"
