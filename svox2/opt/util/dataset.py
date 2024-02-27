@@ -1,3 +1,4 @@
+from filter_dataset import FilterDataset
 from .nerf_dataset import NeRFDataset
 from .llff_dataset import LLFFDataset
 from .nsvf_dataset import NSVFDataset
@@ -24,5 +25,6 @@ datasets = {
     'llff': LLFFDataset,
     'nsvf': NSVFDataset,
     'co3d': CO3DDataset,
+    'filter': FilterDataset,
     'auto': auto_dataset
 }
