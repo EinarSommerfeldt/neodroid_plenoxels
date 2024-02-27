@@ -6,8 +6,8 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --mem=8G
 #SBATCH --gres=gpu:1
-#SBATCH --job-name=plenoxel
-#SBATCH --output=/cluster/home/einarjso/neodroid_plenoxels/training/output/JOB%j.out
+#SBATCH --job-name=render
+#SBATCH --output=/cluster/home/einarjso/neodroid_plenoxels/output/render/JOB%j.out
 echo "we are running from this directory: $SLURM_SUBMIT_DIR"
 echo "the name of the job is: $SLURM_JOB_NAME"
 echo "The job ID is $SLURM_JOB_ID"
@@ -25,5 +25,4 @@ module load PyTorch/1.12.1-foss-2022a-CUDA-11.7.0
 
 
 cd /cluster/home/einarjso/neodroid_plenoxels/svox2/opt
-./launch_neodroid.sh fruit_roi_scale4 0 /cluster/home/einarjso/local_datasets/fruit_roi_scale4 -c configs/neodroid/neodroid.json
-tail -f ckpt/fruit_roi_scale4/log
+python render_imgs_circle.py ckpt/fruit_roi_scale4/ckpt.npz /cluster/home/einarjso/local_datasets/fruit_roi_scale4
