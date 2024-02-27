@@ -31,7 +31,12 @@ def roi_mask(T, K, img_height, img_width, cube: Cuboid):
 
     return mask
 
-def convert_dset(output_folder, pose_folder, image_folder, K_path):
+def convert_dset(dataset_folder):
+    output_folder = dataset_folder + os.sep + "roi"
+    pose_folder = dataset_folder + os.sep + "pose"
+    image_folder = dataset_folder + os.sep + "rgb"
+    K_path = dataset_folder + os.sep + "intrinsics.txt"
+    
     K = np.loadtxt(K_path)
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
@@ -49,7 +54,7 @@ def convert_dset(output_folder, pose_folder, image_folder, K_path):
         
         mask = roi_mask(T, K, image.shape[0], image.shape[1], cuboid)
         image = cv.bitwise_and(image, image, mask=mask)
-        image = image + (255-mask)
+        #image[...,0] = image[...,1] = image[...,2] = image[...,0] + (255-mask) #Doesn't work
         cv.imwrite(output_folder + os.sep + entry_name + ".png", image)
     return 0
 
@@ -163,12 +168,14 @@ def move_roi(name_list, pose_folder, image_folder, K_path):
             cv.waitKey(10)
     return 0
 
-output_folder = r"C:\Users\einar\Desktop\fruit_colmap_notes\roi"
-pose_folder = r"C:\Users\einar\Desktop\fruit_colmap_notes\pose"
-image_folder = r"C:\Users\einar\Desktop\fruit_colmap_notes\rgb" 
-K_path = r"C:\Users\einar\Desktop\fruit_colmap_notes\intrinsics.txt"
+output_folder = r"C:\Users\einar\Desktop\fruit_roi_scale4\roi"
+pose_folder = r"C:\Users\einar\Desktop\fruit_roi_scale4\pose"
+image_folder = r"C:\Users\einar\Desktop\fruit_roi_scale4\rgb" 
+K_path = r"C:\Users\einar\Desktop\fruit_roi_scale4\intrinsics.txt"
 
-convert_dset(output_folder, pose_folder, image_folder, K_path)
+
+dataset_folder = r"C:\Users\einar\Desktop\fruit_roi_scale4"
+convert_dset(dataset_folder)
 
 name_list = [
     "0_train_0000",
@@ -177,5 +184,5 @@ name_list = [
 ]
 #move_roi(name_list, pose_folder, image_folder, K_path)
 
-point_filepath = r"C:\Users\einar\Desktop\colmap_notes\points3D.txt"
+#point_filepath = r"C:\Users\einar\Desktop\colmap_notes\points3D.txt"
 #proj_points(name_list, point_filepath, pose_folder, image_folder, K_path)
