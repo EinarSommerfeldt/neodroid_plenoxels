@@ -31,7 +31,7 @@ def roi_mask(T, K, img_height, img_width, cube: Cuboid):
 
     return mask
 
-def convert_dset(dataset_folder):
+def convert_dset(dataset_folder, alpha = False):
     output_folder = dataset_folder + os.sep + "roi"
     pose_folder = dataset_folder + os.sep + "pose"
     image_folder = dataset_folder + os.sep + "rgb"
@@ -54,7 +54,13 @@ def convert_dset(dataset_folder):
         
         mask = roi_mask(T, K, image.shape[0], image.shape[1], cuboid)
         image = cv.bitwise_and(image, image, mask=mask)
-        #image[...,0] = image[...,1] = image[...,2] = image[...,0] + (255-mask) #Doesn't work
+        
+        if alpha:
+            #Add alpha mask
+            rgba = cv.cvtColor(image, cv.COLOR_BGR2BGRA)
+            mask = (image != 0).any(axis=2)
+            rgba[:, :, 3] = mask*255
+            image = rgba
         cv.imwrite(output_folder + os.sep + entry_name + ".png", image)
     return 0
 
@@ -175,7 +181,7 @@ K_path = r"C:\Users\einar\Desktop\fruit_roi_scale4\intrinsics.txt"
 
 
 dataset_folder = r"C:\Users\einar\Desktop\fruit_roi_scale4"
-convert_dset(dataset_folder)
+convert_dset(dataset_folder, alpha= True)
 
 name_list = [
     "0_train_0000",
