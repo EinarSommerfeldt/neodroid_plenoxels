@@ -25,5 +25,5 @@ module load PyTorch/1.12.1-foss-2022a-CUDA-11.7.0
 
 
 cd /cluster/home/einarjso/neodroid_plenoxels/svox2/opt
-./launch_neodroid.sh test_run 0 /cluster/home/einarjso/local_datasets/fruit_roi_scale4 -c configs/neodroid/neodroid.json
-tail -f ckpt/test_run/log
+./launch_neodroid.sh fruit_roi_tensor_save 0 /cluster/home/einarjso/local_datasets/fruit_roi_scale4 -c configs/neodroid/filterdataset.json
+tail -f ckpt/fruit_roi_tensor_save/log
