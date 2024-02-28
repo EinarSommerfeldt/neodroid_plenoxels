@@ -63,6 +63,13 @@ class FilterDataset(DatasetBase):
             origins = origins.view(-1, 3) #[train_size*h*w,3]
             dirs = dirs.view(-1, 3) #[train_size*h*w,3]
             gt = gt.reshape(-1, 3) #[train_size*h*w,3]
+            #---------------CUSTOM START-----------------------------
+            if self.alpha: #Remove all pixels with alpha == 0
+                mask = self.mask.reshape(-1) #[train_size, h, w] -> [train_size*h*w]
+                origins = origins[mask]
+                dirs = dirs[mask]
+                gt = gt[mask]
+            #---------------CUSTOM END-------------------------------
 
         self.rays_init = Rays(origins=origins, dirs=dirs, gt=gt)
         self.rays = self.rays_init
@@ -102,6 +109,9 @@ class FilterDataset(DatasetBase):
 
         print("LOAD FILTERED NSVF DATA", root, 'split', split)
 
+        #---------------CUSTOM START-----------------------------
+        self.alpha = False
+        #---------------CUSTOM END-------------------------------
         self.split = split
 
         def sort_key(x):
@@ -216,9 +226,13 @@ class FilterDataset(DatasetBase):
         self.c2w_f64[:, :3, 3] *= scene_scale
         self.c2w = self.c2w_f64.float()
 
-        self.gt = torch.stack(all_gt).double() / 255.0
+        self.gt = torch.stack(all_gt).double() / 255.0 #[train_size, h, w, 3/4]
+        #------------------------CUSTOM START-----------------------------
         if self.gt.size(-1) == 4:
             print("Applying alpha channel")
+            self.alpha = True
+            self.mask = self.gt[..., 3] != 0 #[train_size, h, w] (?) 
+            print("mask shape: ", self.mask.shape)
             if white_bkgd:
                 # Apply alpha channel
                 self.gt = self.gt[..., :3] * self.gt[..., 3:] + (1.0 - self.gt[..., 3:])
@@ -226,7 +240,7 @@ class FilterDataset(DatasetBase):
                 self.gt = self.gt[..., :3]
             print("Alpha channel applied")
         self.gt = self.gt.float()
-
+        #------------------------CUSTOM END-----------------------------
         assert full_size[0] > 0 and full_size[1] > 0, "Empty images"
         self.n_images, self.h_full, self.w_full, _ = self.gt.shape
 
