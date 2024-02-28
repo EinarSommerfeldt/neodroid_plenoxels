@@ -1,7 +1,7 @@
 #!/bin/sh
 #SBATCH --partition=GPUQ
 #SBATCH --account=ie-idi 
-#SBATCH --time=00:30:00
+#SBATCH --time=00:10:00
 #SBATCH --nodes=1 
 #SBATCH --ntasks-per-node=1
 #SBATCH --mem=8G
@@ -25,5 +25,5 @@ module load PyTorch/1.12.1-foss-2022a-CUDA-11.7.0
 
 
 cd /cluster/home/einarjso/neodroid_plenoxels/svox2/opt
-./launch_neodroid.sh fruit_roi_tensor_save 0 /cluster/home/einarjso/local_datasets/fruit_roi_scale4 -c configs/neodroid/filterdataset.json
-tail -f ckpt/fruit_roi_tensor_save/log
+./launch_neodroid.sh fruit_roi_alpha_2802 0 /cluster/home/einarjso/local_datasets/fruit_roi_scale4 -c configs/neodroid/filterdataset.json
+tail -f ckpt/fruit_roi_alpha_2802/log
