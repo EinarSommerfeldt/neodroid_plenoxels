@@ -40,14 +40,43 @@ def convert_dset(dataset_folder, alpha = False):
     return 0
 
 
+def expanded_roi(dataset_folder):
+    output_folder = dataset_folder + os.sep + "roi"
+    pose_folder = dataset_folder + os.sep + "pose"
+    image_folder = dataset_folder + os.sep + "rgb"
+    K_path = dataset_folder + os.sep + "intrinsics.txt"
+    
+    K = np.loadtxt(K_path)
+    K_inv = np.linalg.inv(K)
+    #Create pose array
+    pose_folder_obj = os.scandir(pose_folder)
+    poses = []
+    for p in pose_folder_obj:
+        poses.append(np.loadtxt(pose_folder + os.sep + p.name))
+    poses = np.array(poses)
+
+    #Created inverted pose array (to save computation)
+    inverted_poses = poses.copy()
+    for i in range(poses.shape[0]):
+        inverted_poses[i] = W2C_from_pose(poses[i])
+
+    #create fundamental matrix lookup table
+    F_list = [[0]*poses.shape[0] for i in range(poses.shape[0])]
+    for i in range(poses.shape[0]):
+        T1 = poses[i]
+        for j in range(poses.shape[0]): #maybe change order to reduce inversion
+            T2_inv = inverted_poses[j]
+            T2_1 = T2_inv@T1
+            R = T2_1[:3,:3]
+            t = T2_1[:3,3]
+            tx = np.cross(np.eye(3), t)
+            F = K_inv.T@tx@R@K_inv
+            F_list[i][j] = F
 
 
-
-output_folder = r"C:\Users\einar\Desktop\fruit_roi_scale4\roi"
-pose_folder = r"C:\Users\einar\Desktop\fruit_roi_scale4\pose"
-image_folder = r"C:\Users\einar\Desktop\fruit_roi_scale4\rgb" 
-K_path = r"C:\Users\einar\Desktop\fruit_roi_scale4\intrinsics.txt"
+    return 1
 
 
 dataset_folder = r"C:\Users\einar\Desktop\fruit_roi_scale4"
-convert_dset(dataset_folder, alpha= True)
+#convert_dset(dataset_folder, alpha= True)
+expanded_roi(dataset_folder)
