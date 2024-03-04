@@ -39,3 +39,11 @@ def project(K, X):
     uvw = K@X[:3,:]
     uvw /= uvw[2,:]
     return uvw[:2,:]
+
+def W2C_from_pose(T):
+    R = T[:3,:3]
+    t = T[:3,3]
+    t_rot = -R.T @ t.reshape((3,1))
+    Rt = np.block([R.T,t_rot])
+    T_ret = np.block([[Rt],[np.array([0,0,0,1])]])
+    return T_ret
