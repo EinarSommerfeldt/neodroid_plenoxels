@@ -4,7 +4,7 @@ import os
 
 from transforms import *
 from cube import Cuboid
-from roi_mask import roi_mask
+from roi_mask import roi_hull, roi_mask
 
 def convert_dset(dataset_folder, alpha = False):
     output_folder = dataset_folder + os.sep + "roi"
@@ -41,41 +41,59 @@ def convert_dset(dataset_folder, alpha = False):
 
 
 def expanded_roi(dataset_folder):
-    output_folder = dataset_folder + os.sep + "roi"
+    output_folder = dataset_folder + os.sep + "expanded_roi"
     pose_folder = dataset_folder + os.sep + "pose"
     image_folder = dataset_folder + os.sep + "rgb"
     K_path = dataset_folder + os.sep + "intrinsics.txt"
     
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
+
     K = np.loadtxt(K_path)
-    K_inv = np.linalg.inv(K)
+
     #Create pose array
     pose_folder_obj = os.scandir(pose_folder)
     poses = []
     for p in pose_folder_obj:
         poses.append(np.loadtxt(pose_folder + os.sep + p.name))
-    poses = np.array(poses)
+    poses = np.stack(poses)
 
-    #Created inverted pose array (to save computation)
-    inverted_poses = poses.copy()
-    for i in range(poses.shape[0]):
-        inverted_poses[i] = W2C_from_pose(poses[i])
+    #Create cuboid
+    s = 0.1
+    cuboid = Cuboid(0, 0, 0, s*3, s*3, s*3) # Colmap coordinate system
+    [cuboid.x, cuboid.y, cuboid.z] = [1.8666474370158144, 0.29663802654801896, 2.790420592907028]
 
-    #create fundamental matrix lookup table
-    F_list = [[0]*poses.shape[0] for i in range(poses.shape[0])]
-    for i in range(poses.shape[0]):
-        T1 = poses[i]
-        for j in range(poses.shape[0]): #maybe change order to reduce inversion
-            T2_inv = inverted_poses[j]
-            T2_1 = T2_inv@T1
-            R = T2_1[:3,:3]
-            t = T2_1[:3,3]
-            tx = np.cross(np.eye(3), t)
-            F = K_inv.T@tx@R@K_inv
-            F_list[i][j] = F
+    #Find image names
+    folder_obj = os.scandir(image_folder)
+    img_names = [f.name for f in folder_obj]
 
+    for image_index in range(len(img_names)):
+        output_image = cv.imread(image_folder + os.sep + img_names[image_index]) #image to draw lines in
+        Ti = poses[image_index]
+        W2C = W2C_from_pose(Ti) 
+        mask = np.zeros((output_image.shape[0],output_image.shape[1]), np.uint8)
+
+        #Calculate hull of ROI projected into image
+        hull = roi_hull(Ti, K, output_image.shape[0], output_image.shape[1], cuboid) #[n,1,2]
+
+        for pose_index in range(len(poses)):
+            if pose_index==image_index:
+                continue
+            pose_proj = project(K,W2C@poses[pose_index][:,3]) #Project pose into image
+            hull_extended = cv.convexHull(np.vstack([hull, [pose_proj.T.astype(np.int64)]])) #[n,1,2]
+            mask = cv.fillConvexPoly(mask, hull_extended, 255) #Add expanded ROI to mask
+        
+        output_image = cv.bitwise_and(output_image, output_image, mask=mask)
+        
+        #Add alpha layer
+        rgba = cv.cvtColor(output_image, cv.COLOR_BGR2BGRA)
+        alpha = (output_image != 0).any(axis=2)
+        rgba[:, :, 3] = alpha*255
+        output_image = rgba
+
+        cv.imwrite(output_folder + os.sep + img_names[image_index], output_image)
 
     return 1
-
 
 dataset_folder = r"C:\Users\einar\Desktop\fruit_roi_scale4"
 #convert_dset(dataset_folder, alpha= True)
