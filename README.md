@@ -9,7 +9,6 @@ pip install pyquaternion
 pip install opencv-python
 pip install matplotlib
 pip install tensorboard
-pip install lpips
 ```
 In /svox2:
 ```
