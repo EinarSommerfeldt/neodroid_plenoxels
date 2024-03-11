@@ -25,3 +25,8 @@ class Cuboid():
     def print(self):
         print(f"Cuboid, x:{self.x:.3f}, y:{self.y:.3f}, z:{self.z:.3f}"
               f", width:{self.width:.3f}, height:{self.height:.3f}, depth:{self.depth:.3f}")
+        
+cuboid_bananaspot = Cuboid(0, 0, 0, 0.3, 0.3, 0.3)
+[cuboid_bananaspot.x,
+ cuboid_bananaspot.y, 
+ cuboid_bananaspot.z] = [1.8666474370158144, 0.29663802654801896, 2.790420592907028]
