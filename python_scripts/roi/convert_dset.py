@@ -3,7 +3,7 @@ import cv2 as cv
 import os
 
 from transforms import *
-from python_scripts.roi.cuboid import Cuboid
+from cuboid import Cuboid, cuboid_bananaspot
 from roi_mask import roi_hull, roi_mask
 
 def convert_dset(dataset_folder, alpha = False):
@@ -16,9 +16,7 @@ def convert_dset(dataset_folder, alpha = False):
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
-    s = 0.1
-    cuboid = Cuboid(0, 0, 0, s*3, s*3, s*3) # Colmap coordinate system
-    [cuboid.x, cuboid.y, cuboid.z] = [1.8666474370158144, 0.29663802654801896, 2.790420592907028]
+    cuboid = cuboid_bananaspot.copy()
 
     folder_obj = os.scandir(image_folder)
 
