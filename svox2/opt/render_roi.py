@@ -1,5 +1,11 @@
+#Modified render_imgs_circle for masters project
 # Copyright 2021 Alex Yu
 # Render 360 circle path
+
+import sys
+
+sys.path.append("python_scripts/roi")
+from cuboid import Cuboid, cuboid_bananaspot
 
 import torch
 import svox2
@@ -16,6 +22,9 @@ from util import config_util
 import imageio
 import cv2
 from tqdm import tqdm
+
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument('ckpt', type=str)
 
@@ -102,8 +111,7 @@ device = 'cuda:0'
 dset = datasets[args.dataset_type](args.data_dir, split="test",
                                     **config_util.build_data_options(args))
 
-print(dset.scene_scale)
-exit()
+
 if args.vec_up is None:
     up_rot = dset.c2w[:, :3, :3].cpu().numpy()
     ups = np.matmul(up_rot, np.array([0, -1.0, 0])[None, :, None])[..., 0]
@@ -202,6 +210,12 @@ if args.blackbg:
 render_out_path += '.mp4'
 print('Writing to', render_out_path)
 
+#------------------------NEW CODE START-------------------------------------
+
+scale = dset.scene_scale
+
+
+#------------------------NEW CODE END---------------------------------------
 # NOTE: no_grad enables the fast image-level rendering kernel for cuvol backend only
 # other backends will manually generate rays per frame (slow)
 with torch.no_grad():
