@@ -3,7 +3,7 @@ import cv2 as cv
 import os
 
 from transforms import *
-from cube import Cuboid
+from python_scripts.roi.cuboid import Cuboid
 
 
 

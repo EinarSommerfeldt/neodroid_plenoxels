@@ -3,7 +3,7 @@ import cv2 as cv
 import os
 
 from transforms import *
-from cube import Cuboid
+from python_scripts.roi.cuboid import Cuboid
 from roi_mask import roi_hull, roi_mask
 
 def proj_roi(dataset_folder, output_folder, index):

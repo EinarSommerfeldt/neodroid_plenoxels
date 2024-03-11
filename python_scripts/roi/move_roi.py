@@ -4,7 +4,7 @@ import os
 from pynput.keyboard import Key, KeyCode, Listener
 
 from transforms import *
-from cube import Cuboid
+from python_scripts.roi.cuboid import Cuboid
 from roi_mask import roi_mask
 
 def move_roi(name_list, pose_folder, image_folder, K_path):

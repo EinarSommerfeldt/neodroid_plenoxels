@@ -4,7 +4,7 @@ import os
 from pynput.keyboard import Key, KeyCode, Listener
 
 from transforms import *
-from cube import Cuboid
+from python_scripts.roi.cuboid import Cuboid
 
 
 def proj_points(name_list, point_filepath, pose_folder, image_folder, K_path):
