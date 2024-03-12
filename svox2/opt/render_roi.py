@@ -211,6 +211,7 @@ render_out_path += '.mp4'
 print('Writing to', render_out_path)
 
 #------------------------NEW CODE START-------------------------------------
+print("NEW CODE START")
 
 scale = dset.scene_scale
 reso = grid.links.shape
@@ -229,11 +230,11 @@ for x in range(reso[0]):
         y_world = factor*(y-reso[0]/2)
         for z in range(reso[2]):
             z_world = factor*(z-reso[0]/2)
-            print(f"{x_world}, {y_world}, {z_world}")
-    exit()
+            if grid.links[x,y,z] < 0:
+                continue
+            if not cuboid.inside(x_world,y_world,z_world):
+                grid.density_data.data[grid.links[x,y,z]] = 0
 
-grid.density_data.data[:] = 0.0 
-print(grid.density_data.data.shape) 
 print("NEW CODE END")
 exit()
 #------------------------NEW CODE END---------------------------------------
