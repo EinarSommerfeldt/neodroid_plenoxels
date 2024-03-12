@@ -236,7 +236,6 @@ for x in range(reso[0]):
                 grid.density_data.data[grid.links[x,y,z]] = 0
 
 print("NEW CODE END")
-exit()
 #------------------------NEW CODE END---------------------------------------
 # NOTE: no_grad enables the fast image-level rendering kernel for cuvol backend only
 # other backends will manually generate rays per frame (slow)
