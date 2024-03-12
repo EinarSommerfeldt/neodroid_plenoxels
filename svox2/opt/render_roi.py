@@ -4,7 +4,7 @@
 
 import sys
 
-sys.path.append("python_scripts/roi")
+sys.path.append("/cluster/home/einarjso/neodroid_plenoxels/python_scripts/roi")
 from cuboid import Cuboid, cuboid_bananaspot
 
 import torch
@@ -165,7 +165,7 @@ c2ws = torch.from_numpy(c2ws).to(device=device)
 if not path.isfile(args.ckpt):
     args.ckpt = path.join(args.ckpt, 'ckpt.npz')
 
-render_out_path = path.join(path.dirname(args.ckpt), 'circle_renders')
+render_out_path = path.join(path.dirname(args.ckpt), 'render_roi')
 
 # Handle various image transforms
 if args.crop != 1.0:
