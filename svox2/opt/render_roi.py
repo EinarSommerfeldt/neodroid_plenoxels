@@ -213,11 +213,27 @@ print('Writing to', render_out_path)
 #------------------------NEW CODE START-------------------------------------
 
 scale = dset.scene_scale
+reso = grid.links.shape
+center = grid.center
+radius = grid.radius
+
 cuboid = cuboid_bananaspot
 cuboid *= scale
+
 grid.background_data.data[..., -1] = 0.0
-grid.density_data.data[:] = 0.0
-print(grid.density_data.data.shape)
+
+factor = radius[0]/float(reso[0]/2) #Assuming cube bbox and reso
+for x in range(reso[0]):
+    x_world = factor*(x-reso[0]/2)
+    for y in range(reso[1]):
+        y_world = factor*(y-reso[0]/2)
+        for z in range(reso[2]):
+            z_world = factor*(z-reso[0]/2)
+            print(f"{x_world}, {y_world}, {z_world}")
+    exit()
+
+grid.density_data.data[:] = 0.0 
+print(grid.density_data.data.shape) 
 print("NEW CODE END")
 exit()
 #------------------------NEW CODE END---------------------------------------
