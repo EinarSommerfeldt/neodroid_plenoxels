@@ -214,6 +214,10 @@ print('Writing to', render_out_path)
 
 scale = dset.scene_scale
 cuboid = cuboid_bananaspot
+cuboid *= scale
+grid.background_data.data[..., -1] = 0.0
+grid.density_data.data[:] = 0.0
+print(grid.density_data.data.shape)
 print("NEW CODE END")
 exit()
 #------------------------NEW CODE END---------------------------------------
