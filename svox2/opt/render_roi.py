@@ -213,8 +213,9 @@ print('Writing to', render_out_path)
 #------------------------NEW CODE START-------------------------------------
 
 scale = dset.scene_scale
-
-
+cuboid = cuboid_bananaspot
+print("NEW CODE END")
+exit()
 #------------------------NEW CODE END---------------------------------------
 # NOTE: no_grad enables the fast image-level rendering kernel for cuvol backend only
 # other backends will manually generate rays per frame (slow)
