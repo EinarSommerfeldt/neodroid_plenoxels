@@ -1,3 +1,4 @@
+from turtle import width
 import numpy as np
 from transforms import *
 
@@ -26,6 +27,24 @@ class Cuboid():
         print(f"Cuboid, x:{self.x:.3f}, y:{self.y:.3f}, z:{self.z:.3f}"
               f", width:{self.width:.3f}, height:{self.height:.3f}, depth:{self.depth:.3f}")
         
+    def xmin(self):
+        return self.x
+    
+    def ymin(self):
+        return self.y
+    
+    def zmin(self):
+        return self.z
+    
+    def xmax(self):
+        return self.x + self.width
+    
+    def ymax(self):
+        return self.y + self.height
+    
+    def zmin(self):
+        return self.z + self.depth
+    
 cuboid_bananaspot = Cuboid(0, 0, 0, 0.3, 0.3, 0.3)
 [cuboid_bananaspot.x,
  cuboid_bananaspot.y, 
