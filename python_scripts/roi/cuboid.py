@@ -1,4 +1,3 @@
-from turtle import width
 import numpy as np
 from transforms import *
 
@@ -45,6 +44,15 @@ class Cuboid():
     def zmin(self):
         return self.z + self.depth
     
+    def __imul__(self, scale): # *= overload
+        self.x *= scale
+        self.y *= scale
+        self.z *= scale
+        self.width *= scale
+        self.height *= scale
+        self.depth *= scale
+
+        return self
 cuboid_bananaspot = Cuboid(0, 0, 0, 0.3, 0.3, 0.3)
 [cuboid_bananaspot.x,
  cuboid_bananaspot.y, 
