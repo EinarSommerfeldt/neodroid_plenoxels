@@ -13,6 +13,16 @@ class Cuboid():
         self.height = height
         self.depth = depth
     
+    def __imul__(self, scale): # *= overload
+        self.x *= scale
+        self.y *= scale
+        self.z *= scale
+        self.width *= scale
+        self.height *= scale
+        self.depth *= scale
+
+        return self
+
     def to_vertices(self):
         cube_vertices = np.array([
         self.width*np.array([0, 1, 0, 0, 1, 1, 0, 1]),
@@ -21,6 +31,15 @@ class Cuboid():
         [1, 1, 1, 1, 1, 1, 1, 1]])
         cube_world = translate(self.x, self.y, self.z)@rotate_z(np.pi)@cube_vertices
         return cube_world
+    
+    def inside(self, x,y,z):
+        if not (self.x < x and x < self.x + self.width):
+            return False
+        if not (self.y < y and y < self.y + self.height):
+            return False
+        if not (self.z < z and z < self.z + self.depth):
+            return False
+        return True
     
     def print(self):
         print(f"Cuboid, x:{self.x:.3f}, y:{self.y:.3f}, z:{self.z:.3f}"
@@ -44,15 +63,7 @@ class Cuboid():
     def zmin(self):
         return self.z + self.depth
     
-    def __imul__(self, scale): # *= overload
-        self.x *= scale
-        self.y *= scale
-        self.z *= scale
-        self.width *= scale
-        self.height *= scale
-        self.depth *= scale
-
-        return self
+    
 cuboid_bananaspot = Cuboid(0, 0, 0, 0.3, 0.3, 0.3)
 [cuboid_bananaspot.x,
  cuboid_bananaspot.y, 
