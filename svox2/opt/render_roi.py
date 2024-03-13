@@ -222,6 +222,7 @@ cuboid = cuboid_bananaspot
 cuboid *= scale
 
 grid.opt.background_brightness = 0.0
+grid.background_data.data[..., -1] = 0.0
 
 factor = radius[0]/float(reso[0]/2) #Assuming cube bbox and reso
 for x in range(reso[0]):
