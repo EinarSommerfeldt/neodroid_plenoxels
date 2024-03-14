@@ -36,6 +36,7 @@ class Cuboid():
         """
         #Transform points from world to cube coordinates. (to_vertices in reverse)
         #points[:,:] /= points[3,:]
+        points = points.reshape((4,-1))
         points[:3,:] /= self.scale
         points = np.linalg.inv(self.transform)@points
         points = rotate_z(-np.pi)@translate(-self.x, -self.y, -self.z)@points
