@@ -1,6 +1,5 @@
 import numpy as np
-from transforms import *
-
+from .transforms import *
 """
 right-handed colmap coordinate system
 """
@@ -9,19 +8,13 @@ class Cuboid():
         self.x = x
         self.y = y
         self.z = z
+
         self.width = width
         self.height = height
         self.depth = depth
-    
-    def __imul__(self, scale): # *= overload
-        self.x *= scale
-        self.y *= scale
-        self.z *= scale
-        self.width *= scale
-        self.height *= scale
-        self.depth *= scale
 
-        return self
+        self.transform = np.eye(4)
+        self.scale = 1.0
 
     def to_vertices(self):
         cube_vertices = np.array([
@@ -30,38 +23,36 @@ class Cuboid():
         self.depth*np.array([0, 0, 0, 1, 0, 1, 1, 1]),
         [1, 1, 1, 1, 1, 1, 1, 1]])
         cube_world = translate(self.x, self.y, self.z)@rotate_z(np.pi)@cube_vertices
+        cube_world = self.transform@cube_world #Apply transform
+        cube_world[:3,:] *= self.scale #Scale vertices
+
         return cube_world
     
-    def inside(self, x,y,z):
-        if not (self.x < x and x < self.x + self.width):
-            return False
-        if not (self.y < y and y < self.y + self.height):
-            return False
-        if not (self.z < z and z < self.z + self.depth):
-            return False
-        return True
-    
+
+    def inside(self, points): #Rewrite for transformed cube
+        """
+        Checks if a 4xN array of homogenous points is inside cuboid bounds.
+        Returns a boolean array of size 1xN.
+        """
+        #Transform points from world to cube coordinates. (to_vertices in reverse)
+        points[:,:] /= points[3,:]
+        points[:3,:] /= self.scale
+        points = np.linalg.inv(self.transform)@points
+        points = rotate_z(-np.pi)@translate(-self.x, -self.y, -self.z)@points
+
+        whd = np.array([self.width,self.height,self.depth,1.0]).reshape((-1,1))
+        points /= whd
+
+        #Check if points inside cube
+        x_check = np.logical_and(0 <= points[0,:], points[0,:] <= 1)
+        y_check = np.logical_and(0 <= points[1,:], points[1,:] <= 1)
+        z_check = np.logical_and(0 <= points[2,:], points[2,:] <= 1)
+        return np.vstack([x_check, y_check, z_check]).all(0)
+
     def print(self):
         print(f"Cuboid, x:{self.x:.3f}, y:{self.y:.3f}, z:{self.z:.3f}"
               f", width:{self.width:.3f}, height:{self.height:.3f}, depth:{self.depth:.3f}")
         
-    def xmin(self):
-        return self.x
-    
-    def ymin(self):
-        return self.y
-    
-    def zmin(self):
-        return self.z
-    
-    def xmax(self):
-        return self.x + self.width
-    
-    def ymax(self):
-        return self.y + self.height
-    
-    def zmin(self):
-        return self.z + self.depth
     
     
 cuboid_bananaspot = Cuboid(1.8666474370158144,
