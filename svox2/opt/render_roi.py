@@ -104,10 +104,7 @@ parser.add_argument('--blackbg',
                     help="Force a black BG (behind BG model) color; useful for debugging 'clouds'")
 
 #------------------------NEW ARGS START-------------------------------------
-parser.add_argument('--dataset_type',
-                    type=str,
-                    default="filter",
-                    help="Select dataset type. Using filter for custom code")
+
 #------------------------NEW ARGS END---------------------------------------
 args = parser.parse_args()
 config_util.maybe_merge_config_file(args, allow_invalid=True)
