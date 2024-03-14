@@ -228,18 +228,19 @@ grid.background_data.data[..., -1] = 0.0
 factor = grid.radius[0]/float(reso[0]/2) #Assuming cube bbox and reso
 world_coords = factor*(np.arange(0, reso[0], 1.0) - reso[0]/float(2))
 
-def inside_cuboid(a,x,y,z):
+def mask(a,x,y,z):
     if a < 0:
         return False
     x_world = world_coords[x]
     y_world = world_coords[y]
     z_world = world_coords[z]
-    return cuboid.inside(np.array([x_world,y_world,z_world,1.0]))
-v_inside_cuboid = np.vectorize(inside_cuboid)
+    return not cuboid.inside(np.array([x_world,y_world,z_world,1.0]))
+v_mask = np.vectorize(mask)
 
 x, y, z = np.meshgrid(np.arange(reso[0]), np.arange(reso[1]), np.arange(reso[2]), indexing='ij')
-mask_inside = v_inside_cuboid(grid.links,x,y,z)
-grid.density_data.data[grid.links[not mask_inside]] = 0.0
+links_cpu = grid.links.cpu()
+mask_outside = v_mask(links_cpu,x,y,z)
+grid.density_data.data[grid.links[mask_outside]] = 0.0
 """
 for x in range(reso[0]):
     x_world = world_coords[x]
