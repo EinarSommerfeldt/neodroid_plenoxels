@@ -4,8 +4,8 @@
 
 import sys
 
-sys.path.append("/cluster/home/einarjso/neodroid_plenoxels/python_scripts/roi")
-from cuboid import Cuboid, cuboid_bananaspot
+sys.path.append("/cluster/home/einarjso/neodroid_plenoxels/python_scripts")
+from roi.cuboid import Cuboid, cuboid_bananaspot
 
 import torch
 import svox2
