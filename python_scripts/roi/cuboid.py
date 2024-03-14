@@ -35,7 +35,7 @@ class Cuboid():
         Returns a boolean array of size 1xN.
         """
         #Transform points from world to cube coordinates. (to_vertices in reverse)
-        points[:,:] /= points[3,:]
+        #points[:,:] /= points[3,:]
         points[:3,:] /= self.scale
         points = np.linalg.inv(self.transform)@points
         points = rotate_z(-np.pi)@translate(-self.x, -self.y, -self.z)@points
