@@ -216,27 +216,27 @@ print('Writing to', render_out_path)
 #------------------------NEW CODE START-------------------------------------
 print("NEW CODE START")
 
-scale = dset.scene_scale
 reso = grid.links.shape
-center = grid.center
-radius = grid.radius
 
 cuboid = cuboid_bananaspot
-cuboid *= scale
+cuboid.transform = dset.similarity_transform
+cuboid.scale =  dset.scene_scale
 
 grid.opt.background_brightness = 0.0
 grid.background_data.data[..., -1] = 0.0
 
-factor = radius[0]/float(reso[0]/2) #Assuming cube bbox and reso
+factor = grid.radius[0]/float(reso[0]/2) #Assuming cube bbox and reso
+world_coords = factor*(np.arange(0, reso[0], 1.0) - reso[0]/float(2))
 for x in range(reso[0]):
-    x_world = factor*(x-reso[0]/2)
+    x_world = world_coords[x]
     for y in range(reso[1]):
-        y_world = factor*(y-reso[0]/2)
+        y_world = world_coords[y]
         for z in range(reso[2]):
-            z_world = factor*(z-reso[0]/2)
+            z_world = world_coords[z]
             if grid.links[x,y,z] < 0:
                 continue
-            if not cuboid.inside(x_world,y_world,z_world):
+            p = np.array([x_world, y_world, z_world, 1.0])
+            if not cuboid.inside(p):
                 grid.density_data.data[grid.links[x,y,z]] = 0
 
 print("NEW CODE END")
