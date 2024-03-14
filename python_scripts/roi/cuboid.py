@@ -64,7 +64,8 @@ class Cuboid():
         return self.z + self.depth
     
     
-cuboid_bananaspot = Cuboid(0, 0, 0, 0.3, 0.3, 0.3)
-[cuboid_bananaspot.x,
- cuboid_bananaspot.y, 
- cuboid_bananaspot.z] = [1.8666474370158144, 0.29663802654801896, 2.790420592907028]
+cuboid_bananaspot = Cuboid(1.8666474370158144,
+                           0.29663802654801896,
+                           2.790420592907028,
+                             0.3, 0.3, 0.3)
+
