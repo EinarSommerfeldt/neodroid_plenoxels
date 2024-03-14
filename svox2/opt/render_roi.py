@@ -228,6 +228,7 @@ grid.background_data.data[..., -1] = 0.0
 factor = grid.radius[0]/float(reso[0]/2) #Assuming cube bbox and reso
 world_coords = factor*(np.arange(0, reso[0], 1.0) - reso[0]/float(2))
 for x in range(reso[0]):
+    print(f"x:{x}")
     x_world = world_coords[x]
     for y in range(reso[1]):
         y_world = world_coords[y]
