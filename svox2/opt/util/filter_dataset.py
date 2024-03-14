@@ -212,6 +212,7 @@ class FilterDataset(DatasetBase):
 
             # Select subset of files
             T, sscale = similarity_from_cameras(norm_poses) #HERE
+            self.similarity_transform = T
 
             self.c2w_f64 = torch.from_numpy(T) @ self.c2w_f64
             scene_scale = cam_scale_factor * sscale
