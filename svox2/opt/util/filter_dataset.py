@@ -48,7 +48,7 @@ class FilterDataset(DatasetBase):
         dirs /= torch.norm(dirs, dim=-1, keepdim=True) #[h, w, 3]
         dirs = dirs.reshape(1, -1, 3, 1) #[1, h*w, 3, 1]
         del xx, yy, zz
-        #c2w are all camera matrices, multiplying dirs
+        #c2w are all camera pose matrices, multiplying dirs
         dirs = (self.c2w[:, None, :3, :3] @ dirs)[..., 0] #Dirs rotated to world frame [train_size, h*w, 3] 
 
         if factor != 1:
@@ -211,7 +211,7 @@ class FilterDataset(DatasetBase):
                                     for x in norm_pose_files], axis=0)
 
             # Select subset of files
-            T, sscale = similarity_from_cameras(norm_poses)
+            T, sscale = similarity_from_cameras(norm_poses) #HERE
 
             self.c2w_f64 = torch.from_numpy(T) @ self.c2w_f64
             scene_scale = cam_scale_factor * sscale
