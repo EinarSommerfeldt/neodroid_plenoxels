@@ -241,7 +241,8 @@ x, y, z = np.meshgrid(np.arange(reso[0]), np.arange(reso[1]), np.arange(reso[2])
 links_cpu = grid.links.cpu()
 mask_outside = v_mask(links_cpu,x,y,z)
 indicies = grid.links[mask_outside]
-grid.density_data.data[indicies] = 0.0
+
+grid.density_data.data[indicies.long()] = 0.0
 """
 for x in range(reso[0]):
     x_world = world_coords[x]
