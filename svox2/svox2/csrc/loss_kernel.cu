@@ -107,41 +107,55 @@ __global__ void tv_kernel(
         atomicAdd(out, bresult * scale);
     }
 }
-
+/*
+links.packed_accessor32<int32_t, 3, torch::RestrictPtrTraits>(),
+            data.packed_accessor64<float, 2, torch::RestrictPtrTraits>(),
+            start_dim,
+            end_dim,
+            scale / nl,
+            Q,
+            ignore_edge,
+            ndc_coeffx, ndc_coeffy,
+*/
 __launch_bounds__(TV_GRAD_CUDA_THREADS, MIN_BLOCKS_PER_SM)
 __global__ void tv_grad_kernel(
         const torch::PackedTensorAccessor32<int32_t, 3, torch::RestrictPtrTraits> links,
-        const torch::PackedTensorAccessor64<float, 2, torch::RestrictPtrTraits> data,
-        int start_dim, int end_dim,
-        float scale,
-        size_t Q,
-        bool ignore_edge,
-        float ndc_coeffx, float ndc_coeffy,
+        const torch::PackedTensorAccessor64<float, 2, torch::RestrictPtrTraits> data, //(N,1)
+        int start_dim, int end_dim,         //0, 1
+        float scale,                        // args.lambda_tv/|links|^3
+        size_t Q,                           // |links|^3 * (end_dim - start_dim);
+        bool ignore_edge,                   //False
+        float ndc_coeffx, float ndc_coeffy, //ndc_coeffs[0], ndc_coeffs[1]
         // Output
         float* __restrict__ grad_data) {
-    CUDA_GET_THREAD_ID_U64(tid, Q);
+    CUDA_GET_THREAD_ID_U64(tid, Q); //tid = blockIdx.x * blockDim.x + threadIdx.x; if (tid >= Q) return;
     float dummy;
-    const int idx = tid % (end_dim - start_dim) + start_dim;
-    const int xyz = tid / (end_dim - start_dim);
-    const int z = xyz % (links.size(2) - 1);
-    const int xy = xyz / (links.size(2) - 1);
-    const int y = xy % (links.size(1) - 1);
-    const int x = xy / (links.size(1) - 1);
+    const int idx = tid % (end_dim - start_dim) + start_dim; // tid % 1 + 0 (== 0)
+    const int xyz = tid / (end_dim - start_dim);             // tid / 1     (== tid)
+    const int z = xyz % (links.size(2) - 1);    // last |links| digits of tid
+    const int xy = xyz / (links.size(2) - 1);   
+    const int y = xy % (links.size(1) - 1);     // middle |links| digits of tid
+    const int x = xy / (links.size(1) - 1);     // first |links| digits of tid
 
     if (ignore_edge && links[x][y][z] == 0) return;
 
     float scaling[3];
+    /*
+    scaling[0] = links.size(0) * (1.f / 256.f);
+    scaling[1] = links.size(1) * (1.f / 256.f);
+    scaling[2] = links.size(2) * (1.f / 256.f);
+    */
     CALCULATE_RAY_SCALE(scaling, links.size(0), links.size(1), links.size(2));
 
     const float* dptr = data.data();
-    const size_t ddim = data.size(1);
+    const size_t ddim = data.size(1); //1 
     float v000 = 0.f, v100 = 0.f, v010 = 0.f, v001 = 0.f;
     float* gptr000 = &dummy,
          * gptr100 = &dummy,
          * gptr010 = &dummy,
          * gptr001 = &dummy;
 
-    if (links[x][y][z] >= 0) {
+    if (links[x][y][z] >= 0) { //Check if index is valid
         const size_t lnk = links[x][y][z] * ddim + idx;
         v000 = dptr[lnk];
         gptr000 = grad_data + lnk;
@@ -518,7 +532,7 @@ torch::Tensor tv(torch::Tensor links, torch::Tensor data,
 void tv_grad(torch::Tensor links,
              torch::Tensor data,
              int start_dim, int end_dim,
-             float scale,
+             float scale, //args.lambda_tv
              bool use_logalpha,
              float logalpha_delta,
              bool ignore_edge,

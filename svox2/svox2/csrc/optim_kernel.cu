@@ -34,8 +34,8 @@ __global__ void rmsprop_step_kernel(
         float epsilon,
         float minval,
         float lr_last) {
-    CUDA_GET_THREAD_ID(tid, all_data.size(0) * all_data.size(1));
-    int32_t chnl = tid % all_data.size(1);
+    CUDA_GET_THREAD_ID(tid, all_data.size(0) * all_data.size(1)); //tid = blockIdx.x * blockDim.x + threadIdx.x; if (tid >= Q) return
+    int32_t chnl = tid % all_data.size(1); // tid % 1 = 0
     rmsprop_once(all_data.data() + tid,
                  all_rms.data() + tid,
                  all_grad.data() + tid,
@@ -173,8 +173,8 @@ void rmsprop_step(
     const int cuda_n_threads = RMSPROP_STEP_CUDA_THREADS;
 
     if (indexer.dim() == 0) {
-        const size_t Q = data.size(0) * data.size(1);
-        const int blocks = CUDA_N_BLOCKS_NEEDED(Q, cuda_n_threads);
+        const size_t Q = data.size(0) * data.size(1);   // N * 1
+        const int blocks = CUDA_N_BLOCKS_NEEDED(Q, cuda_n_threads); // ((Q - 1) / CUDA_N_THREADS + 1)
         device::rmsprop_step_kernel<<<blocks, cuda_n_threads>>>(
                 data.packed_accessor64<float, 2, torch::RestrictPtrTraits>(),
                 rms.packed_accessor64<float, 2, torch::RestrictPtrTraits>(),
