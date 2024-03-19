@@ -1123,6 +1123,9 @@ class SparseGrid(nn.Module):
             grad_holder.mask_background_out = self.sparse_background_indexer
 
         cu_fn = _C.__dict__[f"volume_render_{self.opt.backend}_fused"] #//TODO: Assuming volume_render_cuvol_fused, check
+        print("volume_render_fused:")
+        print("cu_fn: ", f"volume_render_{self.opt.backend}_fused")
+        exit()
         #  with utils.Timing("actual_render"):
         cu_fn(
             self._to_cpp(replace_basis_data=basis_data),
@@ -1985,7 +1988,7 @@ class SparseGrid(nn.Module):
             ):
                 del self.density_rms
                 self.density_rms = torch.zeros_like(self.density_data.data) # FIXME init?
-            _C.rmsprop_step(
+            _C.rmsprop_step(            #optim_kernel.cu l. 154
                 self.density_data.data,
                 self.density_rms,
                 self.density_data.grad,
@@ -1997,7 +2000,7 @@ class SparseGrid(nn.Module):
                 lr
             ) #optim_kernel.cu
         elif optim == 'sgd':
-            _C.sgd_step(
+            _C.sgd_step( 
                 self.density_data.data,
                 self.density_data.grad,
                 indexer,
