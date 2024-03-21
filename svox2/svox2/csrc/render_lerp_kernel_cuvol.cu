@@ -56,13 +56,13 @@ __device__ __inline__ void trace_ray_cuvol(
     while (t <= ray.tmax) {
 #pragma unroll 3
         for (int j = 0; j < 3; ++j) {
-            ray.pos[j] = fmaf(t, ray.dir[j], ray.origin[j]);
+            ray.pos[j] = fmaf(t, ray.dir[j], ray.origin[j]); // Compute x * y + z as a single operation.
             ray.pos[j] = min(max(ray.pos[j], 0.f), grid.size[j] - 1.f);
             ray.l[j] = min(static_cast<int32_t>(ray.pos[j]), grid.size[j] - 2);
             ray.pos[j] -= static_cast<float>(ray.l[j]);
         }
 
-        const float skip = compute_skip_dist(ray,
+        const float skip = compute_skip_dist(ray, //Compute the amount to skip for negative values
                        grid.links, grid.stride_x,
                        grid.size[2], 0);
 
@@ -71,7 +71,7 @@ __device__ __inline__ void trace_ray_cuvol(
             t += ceilf(skip / opt.step_size) * opt.step_size;
             continue;
         }
-        float sigma = trilerp_cuvol_one(
+        float sigma = trilerp_cuvol_one( 
                 grid.links, grid.density_data,
                 grid.stride_x,
                 grid.size[2],
@@ -84,13 +84,13 @@ __device__ __inline__ void trace_ray_cuvol(
         // if (opt.randomize && opt.random_sigma_std > 0.0) sigma += ray.rng.randn() * opt.random_sigma_std;
 
         if (sigma > opt.sigma_thresh) {
-            float lane_color = trilerp_cuvol_one(
+            float lane_color = trilerp_cuvol_one( //?
                             grid.links,
                             grid.sh_data,
                             grid.stride_x,
                             grid.size[2],
                             grid.sh_data_dim,
-                            ray.l, ray.pos, lane_id);
+                            ray.l, ray.pos, lane_id); //Get coefficients for each lane_id
             lane_color *= sphfunc_val[lane_colorgrp_id]; // bank conflict
 
             const float pcnt = ray.world_step * sigma;
@@ -300,7 +300,7 @@ __device__ __inline__ void trace_ray_cuvol_backward(
         }
         // if (opt.randomize && opt.random_sigma_std > 0.0) sigma += ray.rng.randn() * opt.random_sigma_std;
         if (sigma > opt.sigma_thresh) {
-            float lane_color = trilerp_cuvol_one(
+            float lane_color = trilerp_cuvol_one( //trilerp color
                             grid.links,
                             grid.sh_data,
                             grid.stride_x,
@@ -629,15 +629,15 @@ __global__ void render_ray_kernel(
         TRACE_RAY_CUDA_RAYS_PER_BLOCK];
     ray_spec[ray_blk_id].set(rays.origins[ray_id].data(),
             rays.dirs[ray_id].data());
-    calc_sphfunc(grid, lane_id,             // render_util.cuh 365
+    calc_sphfunc(grid, lane_id,             // Calculates value of SH function in ray direction
                  ray_id,
                  ray_spec[ray_blk_id].dir,
-                 sphfunc_val[ray_blk_id] //Output (E)
-                 );
-    ray_find_bounds(ray_spec[ray_blk_id], grid, opt, ray_id); // render_util.cuh 578, sets ray_spec tmin and tmax
+                 sphfunc_val[ray_blk_id]    //Output
+                 ); 
+    ray_find_bounds(ray_spec[ray_blk_id], grid, opt, ray_id); // sets ray_spec tmin and tmax
     __syncwarp((1U << grid.sh_data_dim) - 1); // "synchronize threads in a warp and provide a memory fence."
 
-    trace_ray_cuvol( //Traces ray for each SH coefficient
+    trace_ray_cuvol( //Finds color by raytracing for each SH coefficient.
         grid,
         ray_spec[ray_blk_id],
         opt,
@@ -693,16 +693,16 @@ __global__ void render_ray_image_kernel(
 __launch_bounds__(TRACE_RAY_BKWD_CUDA_THREADS, MIN_BLOCKS_PER_SM)
 __global__ void render_ray_backward_kernel(
     PackedSparseGridSpec grid,
-    const float* __restrict__ grad_output,
-    const float* __restrict__ color_cache,
+    const float* __restrict__ grad_output, //rgb_gt.data_ptr 
+    const float* __restrict__ color_cache, //rgb_out.data_ptr 
     PackedRaysSpec rays,
     RenderOptions opt,
-    bool grad_out_is_rgb,
+    bool grad_out_is_rgb, //TRUE
     const float* __restrict__ log_transmit_in,
     float beta_loss,
     float sparsity_loss,
     PackedGridOutputGrads grads,
-    float* __restrict__ accum_out = nullptr,
+    float* __restrict__ accum_out = nullptr, 
     float* __restrict__ log_transmit_out = nullptr) {
     CUDA_GET_THREAD_ID(tid, int(rays.origins.size(0)) * WARP_SIZE);
     const int ray_id = tid >> 5;
@@ -725,19 +725,20 @@ __global__ void render_ray_backward_kernel(
     if (lane_id < grid.basis_dim) {
         grad_sphfunc_val[ray_blk_id][lane_id] = 0.f;
     }
-    calc_sphfunc(grid, lane_id,
+    calc_sphfunc(grid, lane_id, //SH function value in direction
                  ray_id,
-                 vdir, sphfunc_val[ray_blk_id]);
+                 vdir, sphfunc_val[ray_blk_id]); 
     if (lane_id == 0) {
-        ray_find_bounds(ray_spec[ray_blk_id], grid, opt, ray_id);
+        ray_find_bounds(ray_spec[ray_blk_id], grid, opt, ray_id); // set ray tmin, tmax
     }
 
-    float grad_out[3];
-    if (grad_out_is_rgb) {
+    //Calculates residuals
+    float grad_out[3]; 
+    if (grad_out_is_rgb) { // TRUE
         const float norm_factor = 2.f / (3 * int(rays.origins.size(0)));
 #pragma unroll 3
-        for (int i = 0; i < 3; ++i) {
-            const float resid = color_cache[ray_id * 3 + i] - grad_output[ray_id * 3 + i];
+        for (int i = 0; i < 3; ++i) { //NCHW: data_pos = n * CHW + c * HW + h * W + w
+            const float resid = color_cache[ray_id * 3 + i] - grad_output[ray_id * 3 + i]; //out - gt
             grad_out[i] = resid * norm_factor;
         }
     } else {
@@ -747,7 +748,7 @@ __global__ void render_ray_backward_kernel(
         }
     }
 
-    __syncwarp((1U << grid.sh_data_dim) - 1);
+    __syncwarp((1U << grid.sh_data_dim) - 1); // Sync threads
     trace_ray_cuvol_backward(
         grid,
         grad_out,
