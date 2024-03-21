@@ -1100,7 +1100,7 @@ class SparseGrid(nn.Module):
         ), "CUDA extension is currently required for fused"
         assert rays.is_cuda
         grad_density, grad_sh, grad_basis, grad_bg = self._get_data_grads()
-        rgb_out = torch.zeros_like(rgb_gt)
+        rgb_out = torch.zeros_like(rgb_gt) #(N, 3)
         basis_data : Optional[torch.Tensor] = None
         if self.basis_type == BASIS_TYPE_MLP: #false?
             with torch.enable_grad():
@@ -1122,10 +1122,8 @@ class SparseGrid(nn.Module):
                     dtype=torch.bool, device=self.background_data.device)
             grad_holder.mask_background_out = self.sparse_background_indexer
 
-        cu_fn = _C.__dict__[f"volume_render_{self.opt.backend}_fused"] #//TODO: Assuming volume_render_cuvol_fused, check
-        print("volume_render_fused:")
-        print("cu_fn: ", f"volume_render_{self.opt.backend}_fused")
-        exit()
+        cu_fn = _C.__dict__[f"volume_render_{self.opt.backend}_fused"] # volume_render_cuvol_fused (render_lerp_kernel_cuvol.cu 1079)
+
         #  with utils.Timing("actual_render"):
         cu_fn(
             self._to_cpp(replace_basis_data=basis_data),
@@ -1134,7 +1132,7 @@ class SparseGrid(nn.Module):
             rgb_gt,
             beta_loss,
             sparsity_loss,
-            rgb_out,
+            rgb_out, #(N, 3)
             grad_holder
         )
         if self.basis_type == BASIS_TYPE_MLP:
