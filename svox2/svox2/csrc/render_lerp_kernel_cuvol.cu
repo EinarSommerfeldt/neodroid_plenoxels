@@ -226,14 +226,14 @@ __device__ __inline__ void trace_ray_sigma_thresh(
 
 __device__ __inline__ void trace_ray_cuvol_backward(
         const PackedSparseGridSpec& __restrict__ grid,
-        const float* __restrict__ grad_output,
-        const float* __restrict__ color_cache,
-        SingleRaySpec& __restrict__ ray,
+        const float* __restrict__ grad_output,  // residuals [3]
+        const float* __restrict__ color_cache,  // color_cache + ray_id * 3
+        SingleRaySpec& __restrict__ ray,        // ray_spec[ray_blk_id]
         const RenderOptions& __restrict__ opt,
         uint32_t lane_id,
-        const float* __restrict__ sphfunc_val,
-        float* __restrict__ grad_sphfunc_val,
-        WarpReducef::TempStorage& __restrict__ temp_storage,
+        const float* __restrict__ sphfunc_val,  // sphfunc_val[ray_blk_id]
+        float* __restrict__ grad_sphfunc_val,   // grad_sphfunc_val[ray_blk_id]
+        WarpReducef::TempStorage& __restrict__ temp_storage,    //temp_storage[ray_blk_id]
         float log_transmit_in,
         float beta_loss,
         float sparsity_loss,
@@ -243,11 +243,11 @@ __device__ __inline__ void trace_ray_cuvol_backward(
         ) {
     const uint32_t lane_colorgrp_id = lane_id % grid.basis_dim;
     const uint32_t lane_colorgrp = lane_id / grid.basis_dim;
-    const uint32_t leader_mask = 1U | (1U << grid.basis_dim) | (1U << (2 * grid.basis_dim));
+    const uint32_t leader_mask = 1U | (1U << grid.basis_dim) | (1U << (2 * grid.basis_dim)); // mask for first ray of SH coefficent
 
-    float accum = fmaf(color_cache[0], grad_output[0],
+    float accum = fmaf(color_cache[0], grad_output[0],          //c[0]*g[0] + c[1]*g[1] + c[2]*g[2]
                       fmaf(color_cache[1], grad_output[1],
-                           color_cache[2] * grad_output[2]));
+                           color_cache[2] * grad_output[2]));   //L_recon kinda?
 
     if (ray.tmin > ray.tmax) {
         if (accum_out != nullptr) { *accum_out = accum; }
@@ -256,7 +256,7 @@ __device__ __inline__ void trace_ray_cuvol_backward(
         return;
     }
 
-    if (beta_loss > 0.f) {
+    if (beta_loss > 0.f) { //L_beta
         const float transmit_in = _EXP(log_transmit_in);
         beta_loss *= (1 - transmit_in / (1 - transmit_in + 1e-3)); // d beta_loss / d log_transmit_in
         accum += beta_loss;
@@ -265,7 +265,7 @@ __device__ __inline__ void trace_ray_cuvol_backward(
 
     float t = ray.tmin;
 
-    const float gout = grad_output[lane_colorgrp];
+    const float gout = grad_output[lane_colorgrp]; // residual for one color
 
     float log_transmit = 0.f;
 
@@ -273,8 +273,8 @@ __device__ __inline__ void trace_ray_cuvol_backward(
     while (t <= ray.tmax) {
 #pragma unroll 3
         for (int j = 0; j < 3; ++j) {
-            ray.pos[j] = fmaf(t, ray.dir[j], ray.origin[j]);
-            ray.pos[j] = min(max(ray.pos[j], 0.f), grid.size[j] - 1.f);
+            ray.pos[j] = fmaf(t, ray.dir[j], ray.origin[j]);            // t * ray.dir + ray.origin
+            ray.pos[j] = min(max(ray.pos[j], 0.f), grid.size[j] - 1.f); //ray in [0, grid.size)
             ray.l[j] = min(static_cast<int32_t>(ray.pos[j]), grid.size[j] - 2);
             ray.pos[j] -= static_cast<float>(ray.l[j]);
         }
@@ -300,34 +300,34 @@ __device__ __inline__ void trace_ray_cuvol_backward(
         }
         // if (opt.randomize && opt.random_sigma_std > 0.0) sigma += ray.rng.randn() * opt.random_sigma_std;
         if (sigma > opt.sigma_thresh) {
-            float lane_color = trilerp_cuvol_one( //trilerp color
+            float lane_color = trilerp_cuvol_one( //trilerp sh coefficients
                             grid.links,
                             grid.sh_data,
                             grid.stride_x,
                             grid.size[2],
                             grid.sh_data_dim,
                             ray.l, ray.pos, lane_id);
-            float weighted_lane_color = lane_color * sphfunc_val[lane_colorgrp_id];
+            float weighted_lane_color = lane_color * sphfunc_val[lane_colorgrp_id]; //Calc color
 
             const float pcnt = ray.world_step * sigma;
-            const float weight = _EXP(log_transmit) * (1.f - _EXP(-pcnt));
+            const float weight = _EXP(log_transmit) * (1.f - _EXP(-pcnt)); // estimated color weight
             log_transmit -= pcnt;
 
             const float lane_color_total = WarpReducef(temp_storage).HeadSegmentedSum(
-                                           weighted_lane_color, lane_colorgrp_id == 0) + 0.5f;
+                                           weighted_lane_color, lane_colorgrp_id == 0) + 0.5f; // estimated color
             float total_color = fmaxf(lane_color_total, 0.f);
-            float color_in_01 = total_color == lane_color_total;
-            total_color *= gout; // Clamp to [+0, infty)
-
-            float total_color_c1 = __shfl_sync(leader_mask, total_color, grid.basis_dim);
+            float color_in_01 = total_color == lane_color_total; //lane_color_total > 0
+            total_color *= gout; // c_est * res | Clamp to [+0, infty) (orig) 
+            //grid.basis_dim = 9
+            float total_color_c1 = __shfl_sync(leader_mask, total_color, grid.basis_dim); 
             total_color += __shfl_sync(leader_mask, total_color, 2 * grid.basis_dim);
             total_color += total_color_c1;
-
-            color_in_01 = __shfl_sync((1U << grid.sh_data_dim) - 1, color_in_01, lane_colorgrp * grid.basis_dim);
-            const float grad_common = weight * color_in_01 * gout;
+            //grid.sh_data_dim = sh_data.size(1)
+            color_in_01 = __shfl_sync((1U << grid.sh_data_dim) - 1, color_in_01, lane_colorgrp * grid.basis_dim); //mask = all?
+            const float grad_common = weight * color_in_01 * gout; //disable grad if total_color < 0
             const float curr_grad_color = sphfunc_val[lane_colorgrp_id] * grad_common;
 
-            if (grid.basis_type != BASIS_TYPE_SH) {
+            if (grid.basis_type != BASIS_TYPE_SH) { // FALSE
                 float curr_grad_sphfunc = lane_color * grad_common;
                 const float curr_grad_up2 = __shfl_down_sync((1U << grid.sh_data_dim) - 1,
                         curr_grad_sphfunc, 2 * grid.basis_dim);
@@ -349,7 +349,7 @@ __device__ __inline__ void trace_ray_cuvol_backward(
                 // Alphs version (from PlenOctrees)
                 // curr_grad_sigma += sparsity_loss * _EXP(-pcnt) * ray.world_step;
             }
-            trilerp_backward_cuvol_one(grid.links, grads.grad_sh_out,
+            trilerp_backward_cuvol_one(grid.links, grads.grad_sh_out, //update grads of all contributing voxels.
                     grid.stride_x,
                     grid.size[2],
                     grid.sh_data_dim,

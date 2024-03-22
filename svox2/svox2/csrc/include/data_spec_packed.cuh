@@ -126,7 +126,7 @@ struct SingleRaySpec {
     float tmin, tmax, world_step;
 
     float pos[3];
-    int32_t l[3];
+    int32_t l[3]; //Links indices
     RandomEngine32 rng;
 };
 

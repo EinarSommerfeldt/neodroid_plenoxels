@@ -93,16 +93,16 @@ __device__ __inline__ float trilerp_cuvol_one(
 template<class data_type_t, class voxel_index_t>
 __device__ __inline__ void trilerp_backward_cuvol_one(
         const int32_t* __restrict__ links,
-        data_type_t* __restrict__ grad_data,
-        int offx, int offy, size_t stride,
-        const voxel_index_t* __restrict__ l,
-        const float* __restrict__ pos,
-        float grad_out,
-        const int idx) {
-    const float ay = 1.f - pos[1], az = 1.f - pos[2];
+        data_type_t* __restrict__ grad_data,    // grads.grad_sh_out
+        int offx, int offy, size_t stride,      // grid.stride_x, grid.size[2], grid.sh_data_dim
+        const voxel_index_t* __restrict__ l,    // ray.l
+        const float* __restrict__ pos,          // ray.pos
+        float grad_out,                         // curr_grad_color
+        const int idx) {                        // lane_id
+    const float ay = 1.f - pos[1], az = 1.f - pos[2]; //?
     float xo = (1.0f - pos[0]) * grad_out;
 
-    const int32_t* __restrict__ link_ptr = links + (offx * l[0] + offy * l[1] + l[2]);
+    const int32_t* __restrict__ link_ptr = links + (offx * l[0] + offy * l[1] + l[2]); // ptr to ray link
 
 #define MAYBE_ADD_LINK(u, val) if (link_ptr[u] >= 0) { \
               atomicAdd(&grad_data[link_ptr[u] * stride + idx], val); \
