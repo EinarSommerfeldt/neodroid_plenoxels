@@ -349,14 +349,14 @@ __device__ __inline__ void trace_ray_cuvol_backward(
                 // Alphs version (from PlenOctrees)
                 // curr_grad_sigma += sparsity_loss * _EXP(-pcnt) * ray.world_step;
             }
-            trilerp_backward_cuvol_one(grid.links, grads.grad_sh_out, //update grads of all contributing voxels.
+            trilerp_backward_cuvol_one(grid.links, grads.grad_sh_out, //update grads of all contributing voxels (SH).
                     grid.stride_x,
                     grid.size[2],
                     grid.sh_data_dim,
                     ray.l, ray.pos,
                     curr_grad_color, lane_id);
             if (lane_id == 0) {
-                trilerp_backward_cuvol_one_density(
+                trilerp_backward_cuvol_one_density( //update grads of all contributing voxels (density).
                         grid.links,
                         grads.grad_density_out,
                         grads.mask_out,
@@ -380,6 +380,7 @@ __device__ __inline__ void trace_ray_cuvol_backward(
         // printf("accum_end_fg=%f\n", accum);
         // printf("log_transmit_fg=%f\n", log_transmit);
     }
+    printf("trace_ray_cuvol_backward lane_id=%d\n", lane_id);
 }
 
 
