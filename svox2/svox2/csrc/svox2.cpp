@@ -22,7 +22,7 @@ void volume_render_cuvol_backward(SparseGridSpec &, RaysSpec &, RenderOptions &,
 void volume_render_cuvol_fused(SparseGridSpec &, RaysSpec &, RenderOptions &,
                                Tensor, float, float, Tensor, GridOutputGrads &);
 //CUSTOM
-void volume_render_cuvol_fused_customized(SparseGridSpec &, RaysSpec &, RenderOptions &,
+void volume_render_cuvol_fused_custom(SparseGridSpec &, RaysSpec &, RenderOptions &,
                                Tensor, float, float, Tensor, GridOutputGrads &);
 
 // Expected termination (depth) rendering
@@ -83,7 +83,7 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
   _REG_FUNC(volume_render_cuvol_image);
   _REG_FUNC(volume_render_cuvol_backward);
   _REG_FUNC(volume_render_cuvol_fused);
-  _REG_FUNC(volume_render_cuvol_fused_customized);
+  _REG_FUNC(volume_render_cuvol_fused_custom); //CUSTOM
   _REG_FUNC(volume_render_expected_term);
   _REG_FUNC(volume_render_sigma_thresh);
 
