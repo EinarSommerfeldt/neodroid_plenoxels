@@ -380,7 +380,6 @@ __device__ __inline__ void trace_ray_cuvol_backward(
         // printf("accum_end_fg=%f\n", accum);
         // printf("log_transmit_fg=%f\n", log_transmit);
     }
-    printf("trace_ray_cuvol_backward lane_id=%d\n", lane_id);
 }
 
 
