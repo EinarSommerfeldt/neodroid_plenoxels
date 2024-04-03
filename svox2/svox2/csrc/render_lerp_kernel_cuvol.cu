@@ -648,6 +648,47 @@ __global__ void render_ray_kernel(
         log_transmit_out == nullptr ? nullptr : log_transmit_out + ray_id);
 }
 
+//CUSTOM
+__launch_bounds__(TRACE_RAY_CUDA_THREADS, MIN_BLOCKS_PER_SM)
+__global__ void render_ray_kernel_custom(
+        PackedSparseGridSpec grid,
+        PackedRaysSpec rays,
+        RenderOptions opt,
+        torch::PackedTensorAccessor32<float, 2, torch::RestrictPtrTraits> out,
+        float* __restrict__ log_transmit_out = nullptr) {
+    CUDA_GET_THREAD_ID(tid, int(rays.origins.size(0)) * WARP_SIZE); //Global thread id? (E)
+    const int ray_id = tid >> 5;                //Actual global ray id
+    const int ray_blk_id = threadIdx.x >> 5;    //Local ray id, threadIdx.x is threadid local to block
+    const int lane_id = threadIdx.x & 0x1F;     //What is lane_id? (E) Spherical harmonic coefficient id
+
+    if (lane_id >= grid.sh_data_dim + 1)  //Makes use of originally underutlized rays.
+        return;
+
+    __shared__ float sphfunc_val[TRACE_RAY_CUDA_RAYS_PER_BLOCK][9];
+    __shared__ SingleRaySpec ray_spec[TRACE_RAY_CUDA_RAYS_PER_BLOCK];
+    __shared__ typename WarpReducef::TempStorage temp_storage[
+        TRACE_RAY_CUDA_RAYS_PER_BLOCK];
+    ray_spec[ray_blk_id].set(rays.origins[ray_id].data(),
+            rays.dirs[ray_id].data());
+    calc_sphfunc(grid, lane_id,             // Calculates value of SH function in ray direction
+                 ray_id,
+                 ray_spec[ray_blk_id].dir,
+                 sphfunc_val[ray_blk_id]    //Output
+                 ); 
+    ray_find_bounds(ray_spec[ray_blk_id], grid, opt, ray_id); // sets ray_spec tmin and tmax
+    __syncwarp((1U << grid.sh_data_dim) - 1); // "synchronize threads in a warp and provide a memory fence."
+
+    trace_ray_cuvol( //Finds color by raytracing for each SH coefficient.
+        grid,
+        ray_spec[ray_blk_id],
+        opt,
+        lane_id, //SH coefficient
+        sphfunc_val[ray_blk_id],
+        temp_storage[ray_blk_id],
+        out[ray_id].data(),
+        log_transmit_out == nullptr ? nullptr : log_transmit_out + ray_id);
+}
+
 __launch_bounds__(TRACE_RAY_CUDA_THREADS, MIN_BLOCKS_PER_SM)
 __global__ void render_ray_image_kernel(
         PackedSparseGridSpec grid,
@@ -710,6 +751,91 @@ __global__ void render_ray_backward_kernel(
     const int lane_id = threadIdx.x & 0x1F;
 
     if (lane_id >= grid.sh_data_dim)
+        return;
+
+    __shared__ float sphfunc_val[TRACE_RAY_BKWD_CUDA_RAYS_PER_BLOCK][9];
+    __shared__ float grad_sphfunc_val[TRACE_RAY_CUDA_RAYS_PER_BLOCK][9];
+    __shared__ SingleRaySpec ray_spec[TRACE_RAY_BKWD_CUDA_RAYS_PER_BLOCK];
+    __shared__ typename WarpReducef::TempStorage temp_storage[
+        TRACE_RAY_CUDA_RAYS_PER_BLOCK];
+    ray_spec[ray_blk_id].set(rays.origins[ray_id].data(),
+                             rays.dirs[ray_id].data());
+    const float vdir[3] = {ray_spec[ray_blk_id].dir[0],
+                     ray_spec[ray_blk_id].dir[1],
+                     ray_spec[ray_blk_id].dir[2] };
+    if (lane_id < grid.basis_dim) {
+        grad_sphfunc_val[ray_blk_id][lane_id] = 0.f;
+    }
+    calc_sphfunc(grid, lane_id, //SH function value in direction
+                 ray_id,
+                 vdir, sphfunc_val[ray_blk_id]); 
+    if (lane_id == 0) {
+        ray_find_bounds(ray_spec[ray_blk_id], grid, opt, ray_id); // set ray tmin, tmax
+    }
+
+    //Calculates residuals
+    float grad_out[3]; 
+    if (grad_out_is_rgb) { // TRUE
+        const float norm_factor = 2.f / (3 * int(rays.origins.size(0)));
+#pragma unroll 3
+        for (int i = 0; i < 3; ++i) { //NCHW: data_pos = n * CHW + c * HW + h * W + w
+            const float resid = color_cache[ray_id * 3 + i] - grad_output[ray_id * 3 + i]; //out - gt
+            grad_out[i] = resid * norm_factor;
+        }
+    } else {
+#pragma unroll 3
+        for (int i = 0; i < 3; ++i) {
+            grad_out[i] = grad_output[ray_id * 3 + i];
+        }
+    }
+
+    __syncwarp((1U << grid.sh_data_dim) - 1); // Sync threads
+    trace_ray_cuvol_backward(
+        grid,
+        grad_out,
+        color_cache + ray_id * 3,
+        ray_spec[ray_blk_id],
+        opt,
+        lane_id,
+        sphfunc_val[ray_blk_id],
+        grad_sphfunc_val[ray_blk_id],
+        temp_storage[ray_blk_id],
+        log_transmit_in == nullptr ? 0.f : log_transmit_in[ray_id],
+        beta_loss,
+        sparsity_loss,
+        grads,
+        accum_out == nullptr ? nullptr : accum_out + ray_id,
+        log_transmit_out == nullptr ? nullptr : log_transmit_out + ray_id);
+    calc_sphfunc_backward(
+                 grid, lane_id,
+                 ray_id,
+                 vdir,
+                 sphfunc_val[ray_blk_id],
+                 grad_sphfunc_val[ray_blk_id],
+                 grads.grad_basis_out);
+}
+
+//CUSTOM
+__launch_bounds__(TRACE_RAY_BKWD_CUDA_THREADS, MIN_BLOCKS_PER_SM)
+__global__ void render_ray_backward_kernel_custom(
+    PackedSparseGridSpec grid,
+    const float* __restrict__ grad_output, //rgb_gt.data_ptr 
+    const float* __restrict__ color_cache, //rgb_out.data_ptr 
+    PackedRaysSpec rays,
+    RenderOptions opt,
+    bool grad_out_is_rgb, //TRUE
+    const float* __restrict__ log_transmit_in,
+    float beta_loss,
+    float sparsity_loss,
+    PackedGridOutputGrads grads,
+    float* __restrict__ accum_out = nullptr, 
+    float* __restrict__ log_transmit_out = nullptr) {
+    CUDA_GET_THREAD_ID(tid, int(rays.origins.size(0)) * WARP_SIZE);
+    const int ray_id = tid >> 5;
+    const int ray_blk_id = threadIdx.x >> 5;
+    const int lane_id = threadIdx.x & 0x1F;
+
+    if (lane_id >= grid.sh_data_dim + 1)
         return;
 
     __shared__ float sphfunc_val[TRACE_RAY_BKWD_CUDA_RAYS_PER_BLOCK][9];
@@ -1121,6 +1247,91 @@ void volume_render_cuvol_fused(
     {
         const int blocks = CUDA_N_BLOCKS_NEEDED(Q * WARP_SIZE, TRACE_RAY_BKWD_CUDA_THREADS);
         device::render_ray_backward_kernel<<<blocks, TRACE_RAY_BKWD_CUDA_THREADS>>>(
+                grid,
+                rgb_gt.data_ptr<float>(),
+                rgb_out.data_ptr<float>(),
+                rays, opt,
+                true,
+                beta_loss > 0.f ? log_transmit.data_ptr<float>() : nullptr,
+                beta_loss / Q,
+                sparsity_loss,
+                // Output
+                grads,
+                use_background ? accum.data_ptr<float>() : nullptr,
+                nullptr);
+    }
+
+    if (use_background) {
+        const int blocks = CUDA_N_BLOCKS_NEEDED(Q, TRACE_RAY_BG_CUDA_THREADS);
+        device::render_background_backward_kernel<<<blocks, TRACE_RAY_BG_CUDA_THREADS>>>(
+                grid,
+                rgb_gt.data_ptr<float>(),
+                rgb_out.data_ptr<float>(),
+                rays,
+                opt,
+                log_transmit.data_ptr<float>(),
+                accum.data_ptr<float>(),
+                true,
+                sparsity_loss,
+                // Output
+                grads);
+    }
+
+    CUDA_CHECK_ERRORS;
+}
+
+void volume_render_cuvol_fused_custom(
+        SparseGridSpec& grid,
+        RaysSpec& rays,
+        RenderOptions& opt,
+        torch::Tensor rgb_gt,
+        float beta_loss,
+        float sparsity_loss,
+        torch::Tensor rgb_out,
+        GridOutputGrads& grads) {
+
+    DEVICE_GUARD(grid.sh_data);
+    CHECK_INPUT(rgb_gt);
+    CHECK_INPUT(rgb_out);
+    grid.check();
+    rays.check();
+    grads.check();
+    const auto Q = rays.origins.size(0);
+
+    bool use_background = grid.background_links.defined() &&
+                          grid.background_links.size(0) > 0; //true?(E)
+    bool need_log_transmit = use_background || beta_loss > 0.f;
+    torch::Tensor log_transmit, accum;
+    if (need_log_transmit) {
+        log_transmit = _get_empty_1d(rays.origins);
+    }
+    if (use_background) {
+        accum = _get_empty_1d(rays.origins);
+    }
+
+    {
+        const int blocks = CUDA_N_BLOCKS_NEEDED(Q * WARP_SIZE, TRACE_RAY_CUDA_THREADS);
+        device::render_ray_kernel_custom<<<blocks, TRACE_RAY_CUDA_THREADS>>>(
+                grid, rays, opt,
+                // Output
+                rgb_out.packed_accessor32<float, 2, torch::RestrictPtrTraits>(),
+                need_log_transmit ? log_transmit.data_ptr<float>() : nullptr);
+    }
+
+    if (use_background) {
+        const int blocks = CUDA_N_BLOCKS_NEEDED(Q, TRACE_RAY_BG_CUDA_THREADS);
+        device::render_background_kernel<<<blocks, TRACE_RAY_BG_CUDA_THREADS>>>(
+                grid,
+                rays,
+                opt,
+                log_transmit.data_ptr<float>(),
+                //Output? (E)
+                rgb_out.packed_accessor32<float, 2, torch::RestrictPtrTraits>());
+    }
+
+    {
+        const int blocks = CUDA_N_BLOCKS_NEEDED(Q * WARP_SIZE, TRACE_RAY_BKWD_CUDA_THREADS);
+        device::render_ray_backward_kernel_custom<<<blocks, TRACE_RAY_BKWD_CUDA_THREADS>>>(
                 grid,
                 rgb_gt.data_ptr<float>(),
                 rgb_out.data_ptr<float>(),
