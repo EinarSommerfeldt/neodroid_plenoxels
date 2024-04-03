@@ -620,11 +620,8 @@ __global__ void render_ray_kernel(
     const int ray_blk_id = threadIdx.x >> 5;    //Local ray id, threadIdx.x is threadid local to block
     const int lane_id = threadIdx.x & 0x1F;     //What is lane_id? (E) Spherical harmonic coefficient id
 
-    if (lane_id >= grid.sh_data_dim) {
-        // Bad, but currently the best way due to coalesced memory access
-        printf("render_ray_kernel superfluous lane_id=%d\n", lane_id);
+    if (lane_id >= grid.sh_data_dim)  // Bad, but currently the best way due to coalesced memory access
         return;
-    }  
 
     __shared__ float sphfunc_val[TRACE_RAY_CUDA_RAYS_PER_BLOCK][9];
     __shared__ SingleRaySpec ray_spec[TRACE_RAY_CUDA_RAYS_PER_BLOCK];
