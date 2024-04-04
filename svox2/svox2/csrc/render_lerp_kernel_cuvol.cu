@@ -119,6 +119,99 @@ __device__ __inline__ void trace_ray_cuvol(
     }
 }
 
+__device__ __inline__ void trace_ray_cuvol_custom(
+        const PackedSparseGridSpec& __restrict__ grid,
+        SingleRaySpec& __restrict__ ray,
+        const RenderOptions& __restrict__ opt,
+        uint32_t lane_id,
+        float* __restrict__ sphfunc_val,
+        WarpReducef::TempStorage& __restrict__ temp_storage,
+        float* __restrict__ out, // ray color? (E)
+        float* __restrict__ out_log_transmit) {
+    const uint32_t lane_colorgrp_id = lane_id % grid.basis_dim; //grid.basis_dim = 9
+    const uint32_t lane_colorgrp = lane_id / grid.basis_dim;
+    if (lane_id >= grid.sh_data_dim)  //Remove when new ray is utilized
+        return;
+    if (ray.tmin > ray.tmax) {
+        out[lane_colorgrp] = (grid.background_nlayers == 0) ? opt.background_brightness : 0.f;
+        if (out_log_transmit != nullptr) {
+            *out_log_transmit = 0.f;
+        }
+        return;
+    }
+
+    float t = ray.tmin;
+    float outv = 0.f;
+
+    float log_transmit = 0.f;
+    // printf("tmin %f, tmax %f \n", ray.tmin, ray.tmax);
+
+    while (t <= ray.tmax) {
+#pragma unroll 3
+        for (int j = 0; j < 3; ++j) {
+            ray.pos[j] = fmaf(t, ray.dir[j], ray.origin[j]); // Compute x * y + z as a single operation.
+            ray.pos[j] = min(max(ray.pos[j], 0.f), grid.size[j] - 1.f);
+            ray.l[j] = min(static_cast<int32_t>(ray.pos[j]), grid.size[j] - 2);
+            ray.pos[j] -= static_cast<float>(ray.l[j]);
+        }
+
+        const float skip = compute_skip_dist(ray, //Compute the amount to skip for negative values
+                       grid.links, grid.stride_x,
+                       grid.size[2], 0);
+
+        if (skip >= opt.step_size) {
+            // For consistency, we skip the by step size
+            t += ceilf(skip / opt.step_size) * opt.step_size;
+            continue;
+        }
+        float sigma = trilerp_cuvol_one( 
+                grid.links, grid.density_data,
+                grid.stride_x,
+                grid.size[2],
+                1,
+                ray.l, ray.pos,
+                0);
+        if (opt.last_sample_opaque && t + opt.step_size > ray.tmax) {
+            ray.world_step = 1e9;
+        }
+        // if (opt.randomize && opt.random_sigma_std > 0.0) sigma += ray.rng.randn() * opt.random_sigma_std;
+
+        if (sigma > opt.sigma_thresh) {
+            float lane_color = trilerp_cuvol_one( //?
+                            grid.links,
+                            grid.sh_data,
+                            grid.stride_x,
+                            grid.size[2],
+                            grid.sh_data_dim,
+                            ray.l, ray.pos, lane_id); //Get coefficients for each lane_id
+            lane_color *= sphfunc_val[lane_colorgrp_id]; // bank conflict
+
+            const float pcnt = ray.world_step * sigma;
+            const float weight = _EXP(log_transmit) * (1.f - _EXP(-pcnt));
+            log_transmit -= pcnt;
+
+            float lane_color_total = WarpReducef(temp_storage).HeadSegmentedSum(
+                                           lane_color, lane_colorgrp_id == 0);
+            outv += weight * fmaxf(lane_color_total + 0.5f, 0.f);  // Clamp to [+0, infty)
+            if (_EXP(log_transmit) < opt.stop_thresh) {
+                log_transmit = -1e3f;
+                break;
+            }
+        }
+        t += opt.step_size;
+    }
+
+    if (grid.background_nlayers == 0) {
+        outv += _EXP(log_transmit) * opt.background_brightness;
+    }
+    if (lane_colorgrp_id == 0) {
+        if (out_log_transmit != nullptr) {
+            *out_log_transmit = log_transmit;
+        }
+        out[lane_colorgrp] = outv;
+    }
+}
+
 __device__ __inline__ void trace_ray_expected_term(
         const PackedSparseGridSpec& __restrict__ grid,
         SingleRaySpec& __restrict__ ray,
@@ -382,6 +475,165 @@ __device__ __inline__ void trace_ray_cuvol_backward(
     }
 }
 
+__device__ __inline__ void trace_ray_cuvol_backward_custom(
+        const PackedSparseGridSpec& __restrict__ grid,
+        const float* __restrict__ grad_output,  // residuals [3]
+        const float* __restrict__ color_cache,  // color_cache + ray_id * 3
+        SingleRaySpec& __restrict__ ray,        // ray_spec[ray_blk_id]
+        const RenderOptions& __restrict__ opt,
+        uint32_t lane_id,
+        const float* __restrict__ sphfunc_val,  // sphfunc_val[ray_blk_id]
+        float* __restrict__ grad_sphfunc_val,   // grad_sphfunc_val[ray_blk_id]
+        WarpReducef::TempStorage& __restrict__ temp_storage,    //temp_storage[ray_blk_id]
+        float log_transmit_in,
+        float beta_loss,
+        float sparsity_loss,
+        PackedGridOutputGrads& __restrict__ grads,
+        float* __restrict__ accum_out,
+        float* __restrict__ log_transmit_out
+        ) {
+    if (lane_id >= grid.sh_data_dim)  //Remove when new ray is utilized
+        return;
+    const uint32_t lane_colorgrp_id = lane_id % grid.basis_dim;
+    const uint32_t lane_colorgrp = lane_id / grid.basis_dim;
+    const uint32_t leader_mask = 1U | (1U << grid.basis_dim) | (1U << (2 * grid.basis_dim)); // mask for first ray of SH coefficent
+
+    float accum = fmaf(color_cache[0], grad_output[0],          //c[0]*g[0] + c[1]*g[1] + c[2]*g[2]
+                      fmaf(color_cache[1], grad_output[1],
+                           color_cache[2] * grad_output[2]));   //L_recon kinda?
+
+    if (ray.tmin > ray.tmax) {
+        if (accum_out != nullptr) { *accum_out = accum; }
+        if (log_transmit_out != nullptr) { *log_transmit_out = 0.f; }
+        // printf("accum_end_fg_fast=%f\n", accum);
+        return;
+    }
+
+    if (beta_loss > 0.f) { //L_beta
+        const float transmit_in = _EXP(log_transmit_in);
+        beta_loss *= (1 - transmit_in / (1 - transmit_in + 1e-3)); // d beta_loss / d log_transmit_in
+        accum += beta_loss;
+        // Interesting how this loss turns out, kinda nice?
+    }
+
+    float t = ray.tmin;
+
+    const float gout = grad_output[lane_colorgrp]; // residual for one color
+
+    float log_transmit = 0.f;
+
+    // remat samples
+    while (t <= ray.tmax) {
+#pragma unroll 3
+        for (int j = 0; j < 3; ++j) {
+            ray.pos[j] = fmaf(t, ray.dir[j], ray.origin[j]);            // t * ray.dir + ray.origin
+            ray.pos[j] = min(max(ray.pos[j], 0.f), grid.size[j] - 1.f); //ray in [0, grid.size)
+            ray.l[j] = min(static_cast<int32_t>(ray.pos[j]), grid.size[j] - 2);
+            ray.pos[j] -= static_cast<float>(ray.l[j]);
+        }
+        const float skip = compute_skip_dist(ray,
+                       grid.links, grid.stride_x,
+                       grid.size[2], 0);
+        if (skip >= opt.step_size) {
+            // For consistency, we skip the by step size
+            t += ceilf(skip / opt.step_size) * opt.step_size;
+            continue;
+        }
+
+        float sigma = trilerp_cuvol_one(
+                grid.links,
+                grid.density_data,
+                grid.stride_x,
+                grid.size[2],
+                1,
+                ray.l, ray.pos,
+                0);
+        if (opt.last_sample_opaque && t + opt.step_size > ray.tmax) {
+            ray.world_step = 1e9;
+        }
+        // if (opt.randomize && opt.random_sigma_std > 0.0) sigma += ray.rng.randn() * opt.random_sigma_std;
+        if (sigma > opt.sigma_thresh) {
+            float lane_color = trilerp_cuvol_one( //trilerp sh coefficients
+                            grid.links,
+                            grid.sh_data,
+                            grid.stride_x,
+                            grid.size[2],
+                            grid.sh_data_dim,
+                            ray.l, ray.pos, lane_id);
+            float weighted_lane_color = lane_color * sphfunc_val[lane_colorgrp_id]; //Calc color
+
+            const float pcnt = ray.world_step * sigma;
+            const float weight = _EXP(log_transmit) * (1.f - _EXP(-pcnt)); // estimated color weight
+            log_transmit -= pcnt;
+
+            const float lane_color_total = WarpReducef(temp_storage).HeadSegmentedSum(
+                                           weighted_lane_color, lane_colorgrp_id == 0) + 0.5f; // estimated color
+            float total_color = fmaxf(lane_color_total, 0.f);
+            float color_in_01 = total_color == lane_color_total; //lane_color_total > 0
+            total_color *= gout; // c_est * res | Clamp to [+0, infty) (orig) 
+            //grid.basis_dim = 9
+            float total_color_c1 = __shfl_sync(leader_mask, total_color, grid.basis_dim); 
+            total_color += __shfl_sync(leader_mask, total_color, 2 * grid.basis_dim);
+            total_color += total_color_c1;
+            //grid.sh_data_dim = sh_data.size(1)
+            color_in_01 = __shfl_sync((1U << grid.sh_data_dim) - 1, color_in_01, lane_colorgrp * grid.basis_dim); //mask = all?
+            const float grad_common = weight * color_in_01 * gout; //disable grad if total_color < 0
+            const float curr_grad_color = sphfunc_val[lane_colorgrp_id] * grad_common;
+
+            if (grid.basis_type != BASIS_TYPE_SH) { // FALSE
+                float curr_grad_sphfunc = lane_color * grad_common;
+                const float curr_grad_up2 = __shfl_down_sync((1U << grid.sh_data_dim) - 1,
+                        curr_grad_sphfunc, 2 * grid.basis_dim);
+                curr_grad_sphfunc += __shfl_down_sync((1U << grid.sh_data_dim) - 1,
+                        curr_grad_sphfunc, grid.basis_dim);
+                curr_grad_sphfunc += curr_grad_up2;
+                if (lane_id < grid.basis_dim) {
+                    grad_sphfunc_val[lane_id] += curr_grad_sphfunc;
+                }
+            }
+
+            accum -= weight * total_color;
+            float curr_grad_sigma = ray.world_step * (
+                    total_color * _EXP(log_transmit) - accum);
+            if (sparsity_loss > 0.f) {
+                // Cauchy version (from SNeRG)
+                curr_grad_sigma += sparsity_loss * (4 * sigma / (1 + 2 * (sigma * sigma)));
+
+                // Alphs version (from PlenOctrees)
+                // curr_grad_sigma += sparsity_loss * _EXP(-pcnt) * ray.world_step;
+            }
+            trilerp_backward_cuvol_one(grid.links, grads.grad_sh_out, //update grads of all contributing voxels (SH).
+                    grid.stride_x,
+                    grid.size[2],
+                    grid.sh_data_dim,
+                    ray.l, ray.pos,
+                    curr_grad_color, lane_id);
+            if (lane_id == 0) {
+                trilerp_backward_cuvol_one_density( //update grads of all contributing voxels (density).
+                        grid.links,
+                        grads.grad_density_out,
+                        grads.mask_out,
+                        grid.stride_x,
+                        grid.size[2],
+                        ray.l, ray.pos, curr_grad_sigma);
+            }
+            if (_EXP(log_transmit) < opt.stop_thresh) {
+                break;
+            }
+        }
+        t += opt.step_size;
+    }
+    if (lane_id == 0) {
+        if (accum_out != nullptr) {
+            // Cancel beta loss out in case of background
+            accum -= beta_loss;
+            *accum_out = accum;
+        }
+        if (log_transmit_out != nullptr) { *log_transmit_out = log_transmit; }
+        // printf("accum_end_fg=%f\n", accum);
+        // printf("log_transmit_fg=%f\n", log_transmit);
+    }
+}
 
 __device__ __inline__ void render_background_forward(
             const PackedSparseGridSpec& __restrict__ grid,
@@ -648,7 +900,6 @@ __global__ void render_ray_kernel(
         log_transmit_out == nullptr ? nullptr : log_transmit_out + ray_id);
 }
 
-//CUSTOM
 __launch_bounds__(TRACE_RAY_CUDA_THREADS, MIN_BLOCKS_PER_SM)
 __global__ void render_ray_kernel_custom(
         PackedSparseGridSpec grid,
@@ -670,15 +921,24 @@ __global__ void render_ray_kernel_custom(
         TRACE_RAY_CUDA_RAYS_PER_BLOCK];
     ray_spec[ray_blk_id].set(rays.origins[ray_id].data(),
             rays.dirs[ray_id].data());
+
+    __shared__ torch::Tensor* quad_mat[TRACE_RAY_CUDA_RAYS_PER_BLOCK];   // Quadratic form matrix for distortion loss.
+    __shared__ torch::Tensor* weights[TRACE_RAY_CUDA_RAYS_PER_BLOCK];    // Density at each sample point.
+
     calc_sphfunc(grid, lane_id,             // Calculates value of SH function in ray direction
                  ray_id,
                  ray_spec[ray_blk_id].dir,
                  sphfunc_val[ray_blk_id]    //Output
                  ); 
     ray_find_bounds(ray_spec[ray_blk_id], grid, opt, ray_id); // sets ray_spec tmin and tmax
-    __syncwarp((1U << grid.sh_data_dim) - 1); // "synchronize threads in a warp and provide a memory fence."
+    if (lane_id == 0) {
+        int max_steps = (ray_spec[ray_blk_id].tmax - ray_spec[ray_blk_id].tmin)/ray_spec[ray_blk_id].world_step; //Maybe opt.step_size is needed (if scale=1 world_step = opt.step_size)
+        quad_mat[ray_blk_id] = new torch::Tensor{torch::zeros({max_steps, max_steps})};
+        weights[ray_blk_id] = new torch::Tensor{torch::zeros(max_steps)};
+    }
+    __syncwarp((1U << (grid.sh_data_dim + 1)) - 1); // "synchronize threads in a warp and provide a memory fence."
 
-    trace_ray_cuvol( //Finds color by raytracing for each SH coefficient.
+    trace_ray_cuvol_custom( //Finds color by raytracing for each SH coefficient.
         grid,
         ray_spec[ray_blk_id],
         opt,
@@ -687,6 +947,13 @@ __global__ void render_ray_kernel_custom(
         temp_storage[ray_blk_id],
         out[ray_id].data(),
         log_transmit_out == nullptr ? nullptr : log_transmit_out + ray_id);
+
+    __syncwarp((1U << (grid.sh_data_dim + 1)) - 1);
+    if (lane_id == 0) {
+        delete quad_mat[ray_blk_id];
+        delete weights[ray_blk_id];
+    }
+    
 }
 
 __launch_bounds__(TRACE_RAY_CUDA_THREADS, MIN_BLOCKS_PER_SM)
@@ -815,7 +1082,6 @@ __global__ void render_ray_backward_kernel(
                  grads.grad_basis_out);
 }
 
-//CUSTOM
 __launch_bounds__(TRACE_RAY_BKWD_CUDA_THREADS, MIN_BLOCKS_PER_SM)
 __global__ void render_ray_backward_kernel_custom(
     PackedSparseGridSpec grid,
@@ -874,8 +1140,8 @@ __global__ void render_ray_backward_kernel_custom(
         }
     }
 
-    __syncwarp((1U << grid.sh_data_dim) - 1); // Sync threads
-    trace_ray_cuvol_backward(
+    __syncwarp((1U << (grid.sh_data_dim + 1)) - 1); // Sync threads
+    trace_ray_cuvol_backward_custom(
         grid,
         grad_out,
         color_cache + ray_id * 3,
@@ -1310,8 +1576,8 @@ void volume_render_cuvol_fused_custom(
     }
 
     //Create distortion loss quadratic form matrix and weight vector
-    torch::Tensor** p_quad_mat_arr = new torch::Tensor*[rays.origins.size(0)];
-    torch::Tensor** p_weights_arr = new torch::Tensor*[rays.origins.size(0)];
+    //torch::Tensor** p_quad_mat_arr = new torch::Tensor*[rays.origins.size(0)]; //CANT BE THIS BIG!!!
+    //torch::Tensor** p_weights_arr = new torch::Tensor*[rays.origins.size(0)];
 
     {
         const int blocks = CUDA_N_BLOCKS_NEEDED(Q * WARP_SIZE, TRACE_RAY_CUDA_THREADS);
