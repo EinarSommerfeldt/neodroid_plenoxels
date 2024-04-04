@@ -1189,7 +1189,6 @@ void volume_render_cuvol_fused_distloss(
 
     {
         const int blocks = CUDA_N_BLOCKS_NEEDED(Q * WARP_SIZE, TRACE_RAY_CUDA_THREADS);
-        printf("render_ray_kernel blocks needed : %d\n", blocks);
         device::render_ray_kernel<<<blocks, TRACE_RAY_CUDA_THREADS>>>(
                 grid, rays, opt,
                 // Output
