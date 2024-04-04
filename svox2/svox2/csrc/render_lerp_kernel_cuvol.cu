@@ -1632,9 +1632,6 @@ void volume_render_cuvol_fused_custom(
                 grads);
     }
 
-    delete[] p_quad_mat_arr;
-    delete[] p_weights_arr;
-
     CUDA_CHECK_ERRORS;
 }
 
