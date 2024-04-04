@@ -921,7 +921,7 @@ __global__ void render_ray_kernel_custom(
         TRACE_RAY_CUDA_RAYS_PER_BLOCK];
     ray_spec[ray_blk_id].set(rays.origins[ray_id].data(),
             rays.dirs[ray_id].data());
-
+    
     __shared__ torch::Tensor* quad_mat[TRACE_RAY_CUDA_RAYS_PER_BLOCK];   // Quadratic form matrix for distortion loss.
     __shared__ torch::Tensor* weights[TRACE_RAY_CUDA_RAYS_PER_BLOCK];    // Density at each sample point.
 
@@ -933,8 +933,16 @@ __global__ void render_ray_kernel_custom(
     ray_find_bounds(ray_spec[ray_blk_id], grid, opt, ray_id); // sets ray_spec tmin and tmax
     if (lane_id == 0) {
         int max_steps = (ray_spec[ray_blk_id].tmax - ray_spec[ray_blk_id].tmin)/ray_spec[ray_blk_id].world_step; //Maybe opt.step_size is needed (if scale=1 world_step = opt.step_size)
-        quad_mat[ray_blk_id] = new torch::Tensor{torch::zeros({max_steps, max_steps})};
-        weights[ray_blk_id] = new torch::Tensor{torch::zeros(max_steps)};
+        
+        auto options =
+        torch::TensorOptions()
+        .dtype(float)
+        .layout(torch::kStrided)
+        .device(out.device())
+        .requires_grad(false);
+    
+        quad_mat[ray_blk_id] = new torch::Tensor{torch::zeros({max_steps, max_steps}, options)};
+        weights[ray_blk_id] = new torch::Tensor{torch::zeros({max_steps}, options)};
     }
     __syncwarp((1U << (grid.sh_data_dim + 1)) - 1); // "synchronize threads in a warp and provide a memory fence."
 
