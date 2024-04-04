@@ -636,7 +636,10 @@ __global__ void render_ray_kernel(
                  ); 
     ray_find_bounds(ray_spec[ray_blk_id], grid, opt, ray_id); // sets ray_spec tmin and tmax
     __syncwarp((1U << grid.sh_data_dim) - 1); // "synchronize threads in a warp and provide a memory fence."
-
+    if (lane_id == 0 && ray_blk_id == 0) {
+        printf("tmin: %f, tmax: %f, world_step: %f", 
+            ray_spec[ray_blk_id].tmin, ray_spec[ray_blk_id].tmax, ray_spec[ray_blk_id].world_step);
+    }
     trace_ray_cuvol( //Finds color by raytracing for each SH coefficient.
         grid,
         ray_spec[ray_blk_id],
