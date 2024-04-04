@@ -661,7 +661,7 @@ __global__ void render_ray_kernel_custom(
     const int ray_blk_id = threadIdx.x >> 5;    //Local ray id, threadIdx.x is threadid local to block
     const int lane_id = threadIdx.x & 0x1F;     //What is lane_id? (E) Spherical harmonic coefficient id
 
-    if (lane_id >= grid.sh_data_dim + 1)  //Makes use of originally underutlized rays.
+    if (lane_id >= grid.sh_data_dim + 1)  //Makes use of originally underutilized rays.
         return;
 
     __shared__ float sphfunc_val[TRACE_RAY_CUDA_RAYS_PER_BLOCK][9];
@@ -835,7 +835,7 @@ __global__ void render_ray_backward_kernel_custom(
     const int ray_blk_id = threadIdx.x >> 5;
     const int lane_id = threadIdx.x & 0x1F;
 
-    if (lane_id >= grid.sh_data_dim + 1)
+    if (lane_id >= grid.sh_data_dim + 1) //Makes use of originally underutilized rays.
         return;
 
     __shared__ float sphfunc_val[TRACE_RAY_BKWD_CUDA_RAYS_PER_BLOCK][9];
@@ -1309,6 +1309,10 @@ void volume_render_cuvol_fused_custom(
         accum = _get_empty_1d(rays.origins);
     }
 
+    //Create distortion loss quadratic form matrix and weight vector
+    torch::Tensor** p_quad_mat_arr = new torch::Tensor*[rays.origins.size(0)];
+    torch::Tensor** p_weights_arr = new torch::Tensor*[rays.origins.size(0)];
+
     {
         const int blocks = CUDA_N_BLOCKS_NEEDED(Q * WARP_SIZE, TRACE_RAY_CUDA_THREADS);
         device::render_ray_kernel_custom<<<blocks, TRACE_RAY_CUDA_THREADS>>>(
@@ -1361,6 +1365,9 @@ void volume_render_cuvol_fused_custom(
                 // Output
                 grads);
     }
+
+    delete[] p_quad_mat_arr;
+    delete[] p_weights_arr;
 
     CUDA_CHECK_ERRORS;
 }
