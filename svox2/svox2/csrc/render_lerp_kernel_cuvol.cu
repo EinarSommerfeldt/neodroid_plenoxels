@@ -609,6 +609,46 @@ __device__ __inline__ void render_background_backward(
 // BEGIN KERNELS
 
 __launch_bounds__(TRACE_RAY_CUDA_THREADS, MIN_BLOCKS_PER_SM)
+__global__ void distloss_kernel(
+        PackedSparseGridSpec grid,
+        PackedRaysSpec rays,
+        RenderOptions opt,
+        torch::PackedTensorAccessor32<float, 2, torch::RestrictPtrTraits> out,
+        float* __restrict__ log_transmit_out = nullptr) {
+    CUDA_GET_THREAD_ID(tid, int(rays.origins.size(0)) * WARP_SIZE); //Global thread id? (E)
+    const int ray_id = tid >> 5;                //Actual global ray id
+    const int ray_blk_id = threadIdx.x >> 5;    //Local ray id, threadIdx.x is threadid local to block
+    const int lane_id = threadIdx.x & 0x1F;     //What is lane_id? (E) Spherical harmonic coefficient id
+
+    if (lane_id >= grid.sh_data_dim)  // Bad, but currently the best way due to coalesced memory access
+        return;
+
+    __shared__ float sphfunc_val[TRACE_RAY_CUDA_RAYS_PER_BLOCK][9];
+    __shared__ SingleRaySpec ray_spec[TRACE_RAY_CUDA_RAYS_PER_BLOCK];
+    __shared__ typename WarpReducef::TempStorage temp_storage[
+        TRACE_RAY_CUDA_RAYS_PER_BLOCK];
+    ray_spec[ray_blk_id].set(rays.origins[ray_id].data(),
+            rays.dirs[ray_id].data());
+    calc_sphfunc(grid, lane_id,             // Calculates value of SH function in ray direction
+                 ray_id,
+                 ray_spec[ray_blk_id].dir,
+                 sphfunc_val[ray_blk_id]    //Output
+                 ); 
+    ray_find_bounds(ray_spec[ray_blk_id], grid, opt, ray_id); // sets ray_spec tmin and tmax
+    __syncwarp((1U << grid.sh_data_dim) - 1); // "synchronize threads in a warp and provide a memory fence."
+
+    trace_ray_cuvol( //Finds color by raytracing for each SH coefficient.
+        grid,
+        ray_spec[ray_blk_id],
+        opt,
+        lane_id, //SH coefficient
+        sphfunc_val[ray_blk_id],
+        temp_storage[ray_blk_id],
+        out[ray_id].data(),
+        log_transmit_out == nullptr ? nullptr : log_transmit_out + ray_id);
+}
+
+__launch_bounds__(TRACE_RAY_CUDA_THREADS, MIN_BLOCKS_PER_SM)
 __global__ void render_ray_kernel(
         PackedSparseGridSpec grid,
         PackedRaysSpec rays,
@@ -1189,7 +1229,7 @@ void volume_render_cuvol_fused_distloss(
 
     {
         const int blocks = CUDA_N_BLOCKS_NEEDED(Q * WARP_SIZE, TRACE_RAY_CUDA_THREADS);
-        device::render_ray_kernel<<<blocks, TRACE_RAY_CUDA_THREADS>>>(
+        device::render_ray_kernel<<<blocks, TRACE_RAY_CUDA_THREADS>>>( //Each block does 4 rays
                 grid, rays, opt,
                 // Output
                 rgb_out.packed_accessor32<float, 2, torch::RestrictPtrTraits>(),
@@ -1208,6 +1248,16 @@ void volume_render_cuvol_fused_distloss(
     }
 
     //Add distortion loss kernel here!
+    {
+        const int blocks = CUDA_N_BLOCKS_NEEDED(Q * WARP_SIZE, TRACE_RAY_CUDA_THREADS);
+        device::distloss_kernel<<<blocks, TRACE_RAY_BG_CUDA_THREADS>>>(
+                grid,
+                rays,
+                opt,
+                log_transmit.data_ptr<float>(),
+                //Output? (E)
+                rgb_out.packed_accessor32<float, 2, torch::RestrictPtrTraits>());
+    }
 
     {
         const int blocks = CUDA_N_BLOCKS_NEEDED(Q * WARP_SIZE, TRACE_RAY_BKWD_CUDA_THREADS);
