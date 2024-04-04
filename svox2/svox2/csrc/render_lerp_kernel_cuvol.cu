@@ -936,9 +936,9 @@ __global__ void render_ray_kernel_custom(
         
         auto options =
         torch::TensorOptions()
-        .dtype(float)
+        .dtype(grid.sh_data.dtype())
         .layout(torch::kStrided)
-        .device(out.device())
+        .device(grid.sh_data.device())
         .requires_grad(false);
     
         quad_mat[ray_blk_id] = new torch::Tensor{torch::zeros({max_steps, max_steps}, options)};
