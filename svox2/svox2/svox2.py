@@ -1195,7 +1195,6 @@ class SparseGrid(nn.Module):
                     dtype=torch.bool, device=self.background_data.device)
             grad_holder.mask_background_out = self.sparse_background_indexer
 
-        print("CUSTOM CODE USED")
         cu_fn = _C.__dict__[f"volume_render_cuvol_fused_custom"] # volume_render_cuvol_fused (render_lerp_kernel_cuvol.cu 1079)
 
         #  with utils.Timing("actual_render"):
