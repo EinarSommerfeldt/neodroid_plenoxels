@@ -636,10 +636,7 @@ __global__ void render_ray_kernel(
                  ); 
     ray_find_bounds(ray_spec[ray_blk_id], grid, opt, ray_id); // sets ray_spec tmin and tmax
     __syncwarp((1U << grid.sh_data_dim) - 1); // "synchronize threads in a warp and provide a memory fence."
-    if (lane_id == 0 && ray_blk_id == 0) {
-        printf("tmin: %f, tmax: %f, world_step: %f", 
-            ray_spec[ray_blk_id].tmin, ray_spec[ray_blk_id].tmax, ray_spec[ray_blk_id].world_step);
-    }
+
     trace_ray_cuvol( //Finds color by raytracing for each SH coefficient.
         grid,
         ray_spec[ray_blk_id],
@@ -1192,6 +1189,7 @@ void volume_render_cuvol_fused_distloss(
 
     {
         const int blocks = CUDA_N_BLOCKS_NEEDED(Q * WARP_SIZE, TRACE_RAY_CUDA_THREADS);
+        printf("render_ray_kernel blocks needed : %d\n", blocks);
         device::render_ray_kernel<<<blocks, TRACE_RAY_CUDA_THREADS>>>(
                 grid, rays, opt,
                 // Output
@@ -1209,6 +1207,8 @@ void volume_render_cuvol_fused_distloss(
                 //Output? (E)
                 rgb_out.packed_accessor32<float, 2, torch::RestrictPtrTraits>());
     }
+
+    //Add distortion loss kernel here!
 
     {
         const int blocks = CUDA_N_BLOCKS_NEEDED(Q * WARP_SIZE, TRACE_RAY_BKWD_CUDA_THREADS);
