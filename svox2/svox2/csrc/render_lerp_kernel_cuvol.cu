@@ -79,7 +79,7 @@ __device__ __inline__ int trace_ray_distloss(
         }
         t += opt.step_size;
     }
-    return i
+    return i;
 }
 
 // * For ray rendering
@@ -679,13 +679,13 @@ __global__ void distloss_kernel(
     ray_spec[ray_blk_id].set(rays.origins[ray_id].data(),
             rays.dirs[ray_id].data());
 
-    __shared__ float ray_length[DISTLOSS_RAY_CUDA_THREADS]
-    __shared__ int max_steps[DISTLOSS_RAY_CUDA_THREADS]
+    __shared__ float ray_length[DISTLOSS_RAY_CUDA_THREADS];
+    __shared__ int max_steps[DISTLOSS_RAY_CUDA_THREADS];
     __shared__ int total_steps[DISTLOSS_RAY_CUDA_THREADS];
 
     ray_find_bounds(ray_spec[ray_blk_id], grid, opt, ray_id); // sets ray_spec tmin and tmax
     
-    ray_length[ray_blk_id] = ray_spec[ray_blk_id].tmax - ray_spec[ray_blk_id].tmin
+    ray_length[ray_blk_id] = ray_spec[ray_blk_id].tmax - ray_spec[ray_blk_id].tmin;
     max_steps[ray_blk_id] = ceil(ray_length[ray_blk_id]/opt.step_size);
     
     float weights[max_steps[ray_blk_id]]{0};
@@ -695,7 +695,7 @@ __global__ void distloss_kernel(
         grid,
         ray_spec[ray_blk_id],
         opt,
-        ray_length,
+        ray_length[ray_blk_id],
         weights,
         normalized_ray_pos);
     printf("total_steps: %d\n", total_steps[ray_blk_id]);
