@@ -688,8 +688,8 @@ __global__ void distloss_kernel(
     ray_length[ray_blk_id] = ray_spec[ray_blk_id].tmax - ray_spec[ray_blk_id].tmin;
     max_steps[ray_blk_id] = ceil(ray_length[ray_blk_id]/opt.step_size);
     
-    float weights[max_steps[ray_blk_id]]{0};
-    float normalized_ray_pos[max_steps[ray_blk_id]]{0};
+    float* weights = new float[max_steps[ray_blk_id]]{0};
+    float* normalized_ray_pos = new float[max_steps[ray_blk_id]]{0};
 
     total_steps[ray_blk_id] = trace_ray_distloss( 
         grid,
@@ -698,7 +698,11 @@ __global__ void distloss_kernel(
         ray_length[ray_blk_id],
         weights,
         normalized_ray_pos);
+        
     printf("total_steps: %d\n", total_steps[ray_blk_id]);
+
+    delete[] weights;
+    delete[] normalized_ray_pos;
 }
 
 __launch_bounds__(TRACE_RAY_CUDA_THREADS, MIN_BLOCKS_PER_SM)
