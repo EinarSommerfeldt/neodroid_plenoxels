@@ -35,7 +35,7 @@ __device__ __inline__ int trace_ray_distloss(
         const PackedSparseGridSpec& __restrict__ grid,
         SingleRaySpec& __restrict__ ray,
         const RenderOptions& __restrict__ opt,
-        const float& __restrict__ ray_length
+        const float& __restrict__ ray_length,
         float* __restrict__ weights,
         float* __restrict__ normalized_ray_pos) {
 
