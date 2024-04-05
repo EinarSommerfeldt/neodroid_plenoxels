@@ -23,8 +23,64 @@ const int TRACE_RAY_BG_CUDA_THREADS = 128;
 const int MIN_BG_BLOCKS_PER_SM = 8;
 typedef cub::WarpReduce<float> WarpReducef;
 
+//CUSTOM
+const int DISTLOSS_RAY_CUDA_THREADS = 128;
+
 namespace device {
 
+/*
+Traces ray and saves densities and associated normalized ray positions
+*/
+__device__ __inline__ int trace_ray_distloss(
+        const PackedSparseGridSpec& __restrict__ grid,
+        SingleRaySpec& __restrict__ ray,
+        const RenderOptions& __restrict__ opt,
+        const float& __restrict__ ray_length
+        float* __restrict__ weights,
+        float* __restrict__ normalized_ray_pos) {
+
+    if (ray.tmin > ray.tmax) {
+        return;
+    }
+
+    float t = ray.tmin;
+    int i = 0;
+
+    while (t <= ray.tmax) {
+#pragma unroll 3
+        for (int j = 0; j < 3; ++j) {
+            ray.pos[j] = fmaf(t, ray.dir[j], ray.origin[j]); // Compute x * y + z as a single operation.
+            ray.pos[j] = min(max(ray.pos[j], 0.f), grid.size[j] - 1.f);
+            ray.l[j] = min(static_cast<int32_t>(ray.pos[j]), grid.size[j] - 2);
+            ray.pos[j] -= static_cast<float>(ray.l[j]);
+        }
+
+        const float skip = compute_skip_dist(ray, //Compute the amount to skip for negative values
+                       grid.links, grid.stride_x,
+                       grid.size[2], 0);
+
+        if (skip >= opt.step_size) {
+            // For consistency, we skip the by step size
+            t += ceilf(skip / opt.step_size) * opt.step_size;
+            continue;
+        }
+        float sigma = trilerp_cuvol_one( 
+                grid.links, grid.density_data,
+                grid.stride_x,
+                grid.size[2],
+                1,
+                ray.l, ray.pos,
+                0);
+
+        if (sigma > opt.sigma_thresh) {
+            weights[i] = sigma;
+            normalized_ray_pos[i] = (t-ray.tmin)/ray_length;
+            i++;
+        }
+        t += opt.step_size;
+    }
+    return i
+}
 
 // * For ray rendering
 __device__ __inline__ void trace_ray_cuvol(
@@ -608,44 +664,41 @@ __device__ __inline__ void render_background_backward(
 
 // BEGIN KERNELS
 
-__launch_bounds__(TRACE_RAY_CUDA_THREADS, MIN_BLOCKS_PER_SM)
+__launch_bounds__(DISTLOSS_RAY_CUDA_THREADS, MIN_BLOCKS_PER_SM)
 __global__ void distloss_kernel(
         PackedSparseGridSpec grid,
         PackedRaysSpec rays,
         RenderOptions opt,
-        torch::PackedTensorAccessor32<float, 2, torch::RestrictPtrTraits> out,
-        float* __restrict__ log_transmit_out = nullptr) {
+        PackedGridOutputGrads grads) {
+
     CUDA_GET_THREAD_ID(tid, int(rays.origins.size(0)) * WARP_SIZE); //Global thread id? (E)
-    const int ray_id = tid >> 5;                //Actual global ray id
-    const int ray_blk_id = threadIdx.x >> 5;    //Local ray id, threadIdx.x is threadid local to block
-    const int lane_id = threadIdx.x & 0x1F;     //What is lane_id? (E) Spherical harmonic coefficient id
-
-    if (lane_id >= grid.sh_data_dim)  // Bad, but currently the best way due to coalesced memory access
-        return;
-
-    __shared__ float sphfunc_val[TRACE_RAY_CUDA_RAYS_PER_BLOCK][9];
-    __shared__ SingleRaySpec ray_spec[TRACE_RAY_CUDA_RAYS_PER_BLOCK];
-    __shared__ typename WarpReducef::TempStorage temp_storage[
-        TRACE_RAY_CUDA_RAYS_PER_BLOCK];
+    const int ray_id = tid;                // Global ray id
+    const int ray_blk_id = threadIdx.x;    // Local ray id, threadIdx.x is threadid local to block
+    
+    __shared__ SingleRaySpec ray_spec[DISTLOSS_RAY_CUDA_THREADS];
     ray_spec[ray_blk_id].set(rays.origins[ray_id].data(),
             rays.dirs[ray_id].data());
-    calc_sphfunc(grid, lane_id,             // Calculates value of SH function in ray direction
-                 ray_id,
-                 ray_spec[ray_blk_id].dir,
-                 sphfunc_val[ray_blk_id]    //Output
-                 ); 
-    ray_find_bounds(ray_spec[ray_blk_id], grid, opt, ray_id); // sets ray_spec tmin and tmax
-    __syncwarp((1U << grid.sh_data_dim) - 1); // "synchronize threads in a warp and provide a memory fence."
 
-    trace_ray_cuvol( //Finds color by raytracing for each SH coefficient.
+    __shared__ float ray_length[DISTLOSS_RAY_CUDA_THREADS]
+    __shared__ int max_steps[DISTLOSS_RAY_CUDA_THREADS]
+    __shared__ int total_steps[DISTLOSS_RAY_CUDA_THREADS];
+
+    ray_find_bounds(ray_spec[ray_blk_id], grid, opt, ray_id); // sets ray_spec tmin and tmax
+    
+    ray_length[ray_blk_id] = ray_spec[ray_blk_id].tmax - ray_spec[ray_blk_id].tmin
+    max_steps[ray_blk_id] = ceil(ray_length[ray_blk_id]/opt.step_size);
+    
+    float weights[max_steps[ray_blk_id]]{0};
+    float normalized_ray_pos[max_steps[ray_blk_id]]{0};
+
+    total_steps[ray_blk_id] = trace_ray_distloss( 
         grid,
         ray_spec[ray_blk_id],
         opt,
-        lane_id, //SH coefficient
-        sphfunc_val[ray_blk_id],
-        temp_storage[ray_blk_id],
-        out[ray_id].data(),
-        log_transmit_out == nullptr ? nullptr : log_transmit_out + ray_id);
+        ray_length,
+        weights,
+        normalized_ray_pos);
+    printf("total_steps: %d\n", total_steps[ray_blk_id]);
 }
 
 __launch_bounds__(TRACE_RAY_CUDA_THREADS, MIN_BLOCKS_PER_SM)
@@ -1229,7 +1282,7 @@ void volume_render_cuvol_fused_distloss(
 
     {
         const int blocks = CUDA_N_BLOCKS_NEEDED(Q * WARP_SIZE, TRACE_RAY_CUDA_THREADS);
-        device::render_ray_kernel<<<blocks, TRACE_RAY_CUDA_THREADS>>>( //Each block does 4 rays
+        device::render_ray_kernel<<<blocks, TRACE_RAY_CUDA_THREADS>>>( //Each block does 4 rays of 32 threads
                 grid, rays, opt,
                 // Output
                 rgb_out.packed_accessor32<float, 2, torch::RestrictPtrTraits>(),
@@ -1249,14 +1302,13 @@ void volume_render_cuvol_fused_distloss(
 
     //Add distortion loss kernel here!
     {
-        const int blocks = CUDA_N_BLOCKS_NEEDED(Q * WARP_SIZE, TRACE_RAY_CUDA_THREADS);
-        device::distloss_kernel<<<blocks, TRACE_RAY_BG_CUDA_THREADS>>>(
+        const int blocks = CUDA_N_BLOCKS_NEEDED(Q * WARP_SIZE, DISTLOSS_RAY_CUDA_THREADS); //Change
+        device::distloss_kernel<<<blocks, DISTLOSS_RAY_CUDA_THREADS>>>(
                 grid,
                 rays,
                 opt,
-                log_transmit.data_ptr<float>(),
-                //Output? (E)
-                rgb_out.packed_accessor32<float, 2, torch::RestrictPtrTraits>());
+                //Output
+                grads);
     }
 
     {
