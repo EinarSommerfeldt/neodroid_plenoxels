@@ -682,15 +682,15 @@ __global__ void distloss_kernel(
     __shared__ float ray_length[DISTLOSS_RAY_CUDA_THREADS];
     __shared__ int max_steps[DISTLOSS_RAY_CUDA_THREADS];
     __shared__ int total_steps[DISTLOSS_RAY_CUDA_THREADS];
-
+    printf("before ray_find_bounds\n");
     ray_find_bounds(ray_spec[ray_blk_id], grid, opt, ray_id); // sets ray_spec tmin and tmax
-    
+    printf("before ray_length and max_steps\n");
     ray_length[ray_blk_id] = ray_spec[ray_blk_id].tmax - ray_spec[ray_blk_id].tmin;
     max_steps[ray_blk_id] = ceil(ray_length[ray_blk_id]/opt.step_size);
-    
+    printf("before allocation\n");
     float* weights = new float[max_steps[ray_blk_id]]{0};
     float* normalized_ray_pos = new float[max_steps[ray_blk_id]]{0};
-
+    printf("before trace_ray_distloss\n");
     total_steps[ray_blk_id] = trace_ray_distloss( 
         grid,
         ray_spec[ray_blk_id],
