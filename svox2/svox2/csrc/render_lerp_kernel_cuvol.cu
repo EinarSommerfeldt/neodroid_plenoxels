@@ -64,6 +64,7 @@ __device__ __inline__ int trace_ray_distloss(
             t += ceilf(skip / opt.step_size) * opt.step_size;
             continue;
         }
+        printf("skip: %f\n", skip);
         float sigma = trilerp_cuvol_one( 
                 grid.links, grid.density_data,
                 grid.stride_x,
@@ -71,7 +72,7 @@ __device__ __inline__ int trace_ray_distloss(
                 1,
                 ray.l, ray.pos,
                 0);
-
+        printf("sigma: %f\n", sigma);
         if (sigma > opt.sigma_thresh) {
             weights[i] = sigma;
             normalized_ray_pos[i] = (t-ray.tmin)/ray_length;
@@ -690,6 +691,7 @@ __global__ void distloss_kernel(
     float* weights = new float[max_steps[ray_blk_id]]{0}; //This uses too much memory
     float* normalized_ray_pos = new float[max_steps[ray_blk_id]]{0};
     if(ray_id%1000 == 0)printf("before trace_ray_distloss\n");
+    if (ray_id%1000 == 0) {
     total_steps[ray_blk_id] = trace_ray_distloss( 
         grid,
         ray_spec[ray_blk_id],
@@ -697,7 +699,7 @@ __global__ void distloss_kernel(
         ray_length[ray_blk_id],
         weights,
         normalized_ray_pos);
-        
+    }
     if(ray_id%1000 == 0)printf("total_steps: %d\n", total_steps[ray_blk_id]);
 
     delete[] weights;
