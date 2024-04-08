@@ -24,7 +24,7 @@ const int MIN_BG_BLOCKS_PER_SM = 8;
 typedef cub::WarpReduce<float> WarpReducef;
 
 //CUSTOM
-const int DISTLOSS_RAY_CUDA_THREADS = 128;
+const int DISTLOSS_RAY_CUDA_THREADS = 32;
 
 namespace device {
 
@@ -664,7 +664,7 @@ __device__ __inline__ void render_background_backward(
 
 // BEGIN KERNELS
 
-__launch_bounds__(DISTLOSS_RAY_CUDA_THREADS, MIN_BLOCKS_PER_SM)
+__launch_bounds__(DISTLOSS_RAY_CUDA_THREADS, 0)
 __global__ void distloss_kernel(
         PackedSparseGridSpec grid,
         PackedRaysSpec rays,
@@ -682,15 +682,14 @@ __global__ void distloss_kernel(
     __shared__ float ray_length[DISTLOSS_RAY_CUDA_THREADS];
     __shared__ int max_steps[DISTLOSS_RAY_CUDA_THREADS];
     __shared__ int total_steps[DISTLOSS_RAY_CUDA_THREADS];
-    printf("before ray_find_bounds\n");
+
     ray_find_bounds(ray_spec[ray_blk_id], grid, opt, ray_id); // sets ray_spec tmin and tmax
-    printf("before ray_length and max_steps\n");
     ray_length[ray_blk_id] = ray_spec[ray_blk_id].tmax - ray_spec[ray_blk_id].tmin;
     max_steps[ray_blk_id] = ceil(ray_length[ray_blk_id]/opt.step_size);
-    printf("before allocation\n");
-    float* weights = new float[max_steps[ray_blk_id]]{0};
+    if(ray_id%1000 == 0) printf("before allocation\n");
+    float* weights = new float[max_steps[ray_blk_id]]{0}; //This uses too much memory
     float* normalized_ray_pos = new float[max_steps[ray_blk_id]]{0};
-    printf("before trace_ray_distloss\n");
+    if(ray_id%1000 == 0)printf("before trace_ray_distloss\n");
     total_steps[ray_blk_id] = trace_ray_distloss( 
         grid,
         ray_spec[ray_blk_id],
@@ -699,7 +698,7 @@ __global__ void distloss_kernel(
         weights,
         normalized_ray_pos);
         
-    printf("total_steps: %d\n", total_steps[ray_blk_id]);
+    if(ray_id%1000 == 0)printf("total_steps: %d\n", total_steps[ray_blk_id]);
 
     delete[] weights;
     delete[] normalized_ray_pos;
