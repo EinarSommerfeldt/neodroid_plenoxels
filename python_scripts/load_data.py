@@ -1,4 +1,5 @@
 import numpy as np
+import os
 
 def load_data(path: str):
     """
@@ -22,9 +23,23 @@ def load_data(path: str):
 
     links = z.f.links
     basis_dim = (sh_data.shape[1]) // 3
-    radius = z.f.radius.tolist() if "radius" in z.files else [1.0, 1.0, 1.0]
-    center = z.f.center.tolist() if "center" in z.files else [0.0, 0.0, 0.0]
+    radius = z.f.radius.tolist() if "radius" in z.files else [1.0, 1.0, 1.0] #[1.0, 1.0, 1.0]
+    center = z.f.center.tolist() if "center" in z.files else [0.0, 0.0, 0.0] #[0.0, 0.0, 0.0]
 
+    if sh_data.dtype != np.float32:
+            sh_data = sh_data.astype(np.float32)
+    if density_data.dtype != np.float32:
+        density_data = density_data.astype(np.float32)
+
+    print([key for key in z.keys()])
+    print(links.shape)
+    print(density_data.shape)
+    print(links[links>-1].shape)
+
+    
     return 1
 
-load_data()
+folder = r"C:\Users\einar\OneDrive - NTNU\Semester 10\master project\ckpts"
+file = "fruit_expanded_filtering_0703.npz"
+
+load_data(folder + os.sep + file)
