@@ -73,12 +73,12 @@ __device__ __inline__ int trace_ray_distloss(
                 ray.l, ray.pos,
                 0);
         printf("sigma: %f\n", sigma);
+        /*
         if (sigma > opt.sigma_thresh) {
-            if (i > ray_length) printf("out of bounds!\n");
             weights[i] = sigma;
             normalized_ray_pos[i] = (t-ray.tmin)/ray_length;
             i++;
-        }
+        }*/
         t += opt.step_size;
     }
     return i;
