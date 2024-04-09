@@ -555,8 +555,7 @@ while True:
 
             # Apply distloss regularizer
             grid.inplace_distloss_grad(grid.density_data.grad,
-                                       rays,
-                                       scaling=1.0)
+                                       rays)
 
             # Apply TV/Sparsity regularizers
             if args.lambda_tv > 0.0: #USED
