@@ -1228,6 +1228,7 @@ class SparseGrid(nn.Module):
         grad_holder = _C.GridOutputGrads() # grad_holder object holds references to grads.
         grad_holder.grad_density_out = grad_density
 
+        print("_C.distloss_grad")
         _C.distloss_grad(
             self._to_cpp(),
             rays._to_cpp(), 

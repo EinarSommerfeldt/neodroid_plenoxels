@@ -677,7 +677,7 @@ void distloss_grad(
     rays.check();
     grads.check();
     const auto Q = rays.origins.size(0);
-
+    printf("distloss_kernel");
     {
         const int blocks = CUDA_N_BLOCKS_NEEDED(Q, DISTLOSS_RAY_CUDA_THREADS);
         device::distloss_kernel<<<blocks, DISTLOSS_RAY_CUDA_THREADS>>>(
@@ -713,11 +713,11 @@ __global__ void distloss_kernel(
     ray_find_bounds(ray_spec[ray_blk_id], grid, opt, ray_id); // sets ray_spec tmin and tmax
     ray_length[ray_blk_id] = ray_spec[ray_blk_id].tmax - ray_spec[ray_blk_id].tmin;
     max_steps[ray_blk_id] = ceil(ray_length[ray_blk_id]/opt.step_size);
-    if(ray_id%1000 == 0) printf("before weights\n");
+    if(ray_id%1000 == 0) printf("weights\n");
     float* weights = new float[max_steps[ray_blk_id]]{0};
-    if(ray_id%1000 == 0) printf("before normalized_ray_pos\n");
+    if(ray_id%1000 == 0) printf("normalized_ray_pos\n");
     float* normalized_ray_pos = new float[max_steps[ray_blk_id]]{0};
-    if(ray_id%1000 == 0)printf("before trace_ray_distloss\n");
+    if(ray_id%1000 == 0)printf("trace_ray_distloss\n");
     if (ray_id%1000 == 0) {
     total_steps[ray_blk_id] = trace_ray_distloss( 
         grid,
