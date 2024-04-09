@@ -1349,7 +1349,7 @@ void volume_render_cuvol_fused_distloss(
                 // Output
                 grads);
     }
-
+    printf("volume_render_cuvol_fused_distloss finished");
     CUDA_CHECK_ERRORS;
 }
 
