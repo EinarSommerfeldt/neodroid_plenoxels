@@ -670,9 +670,6 @@ void distloss_grad(
         float scaling,
         GridOutputGrads& grads) {
 
-    DEVICE_GUARD(grid.sh_data);
-    CHECK_INPUT(rgb_gt);
-    CHECK_INPUT(rgb_out);
     grid.check();
     rays.check();
     grads.check();
