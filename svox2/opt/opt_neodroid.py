@@ -554,8 +554,7 @@ while True:
             #          sparsity_file.write(f"{gstep_id} {nz}\n")
 
             # Apply distloss regularizer
-            grid.inplace_distloss_grad(grid.density_data.grad,
-                                       rays)
+            grid.inplace_distloss_grad(rays, scaling = 1.0)
 
             # Apply TV/Sparsity regularizers
             if args.lambda_tv > 0.0: #USED
