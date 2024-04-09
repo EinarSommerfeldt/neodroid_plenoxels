@@ -663,6 +663,31 @@ __device__ __inline__ void render_background_backward(
     }
 }
 
+void distloss_grad(
+        SparseGridSpec& grid,
+        RaysSpec& rays,
+        RenderOptions& opt,
+        GridOutputGrads& grads) {
+
+    DEVICE_GUARD(grid.sh_data);
+    CHECK_INPUT(rgb_gt);
+    CHECK_INPUT(rgb_out);
+    grid.check();
+    rays.check();
+    grads.check();
+    const auto Q = rays.origins.size(0);
+
+    {
+        const int blocks = CUDA_N_BLOCKS_NEEDED(Q, DISTLOSS_RAY_CUDA_THREADS);
+        device::distloss_kernel<<<blocks, DISTLOSS_RAY_CUDA_THREADS>>>(
+                grid,
+                rays,
+                opt,
+                //Output
+                grads);
+    }
+}
+
 // BEGIN KERNELS
 
 __launch_bounds__(DISTLOSS_RAY_CUDA_THREADS, 0)
