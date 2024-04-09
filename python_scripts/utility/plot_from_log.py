@@ -136,10 +136,7 @@ def plot_evals_together(input_dict, title = ""):
 
 
 
-
-
-
-log_folder = r"C:\Users\einar\OneDrive - NTNU\Semester 9\Neodroid project\logs"
+log_folder = r"C:\Users\einar\OneDrive - NTNU\Semester 10\master project\logs"
 input_dict = {"Wrong transformation": log_folder+os.sep+"lighthouse_wrong_ds", 
              "Correct transformation": log_folder+os.sep+"Lighthouse_colmapc2w"}
 
@@ -148,8 +145,11 @@ input_dict = {"Basic": log_folder+os.sep+"colmapc2w_good_example",
              "Nearclip + Weight Decay": log_folder+os.sep+"fruit_fix",}
 #plot_evals_together(input_dict, "Fruit Test PSNR")
 
-eval_stats, train_stats = get_stats(log_folder+os.sep+"lego_test")
-#make_plots("Lego stats", eval_stats, train_stats)
+
+
+
+eval_stats, train_stats = get_stats(log_folder+os.sep+"fruit_expanded_filtering_fixed_1103")
+make_plots("Expanded ROI", eval_stats, train_stats)
 
 eval_max, train_max = peak_psnr(eval_stats, train_stats)
-print(eval_max)
+print("training max:", train_max, "eval max:", eval_max)
