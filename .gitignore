@@ -1,7 +1,6 @@
 .vscode/
 cal2/
-python_scripts/roi/__pycache__/cube.cpython-310.pyc
-python_scripts/roi/__pycache__/transforms.cpython-310.pyc
 output/
 svox2/svox2/csrc.cpython-310-x86_64-linux-gnu.so
 svox2/build/
+*.pyc
