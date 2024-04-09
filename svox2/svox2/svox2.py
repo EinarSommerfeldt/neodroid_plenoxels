@@ -1232,7 +1232,7 @@ class SparseGrid(nn.Module):
         _C.distloss_grad(
             self._to_cpp(),
             rays._to_cpp(), 
-            self.opt._to_cpp,
+            self.opt._to_cpp(),
             scaling, 
             grad_holder)
         
