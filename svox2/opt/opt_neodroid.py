@@ -499,7 +499,7 @@ while True:
             rays = svox2.Rays(batch_origins, batch_dirs)
 
             #  with Timing("volrend_fused"):
-            rgb_pred = grid.volume_render_fused_custom(rays, rgb_gt, #svox.py 
+            rgb_pred = grid.volume_render_fused(rays, rgb_gt, #svox.py 
                     beta_loss=args.lambda_beta,
                     sparsity_loss=args.lambda_sparsity,
                     randomize=args.enable_random) #Generates gradients
@@ -552,6 +552,11 @@ while True:
             #          nz = indexer.size()
             #      with open(os.path.join(args.train_dir, 'grad_sparsity.txt'), 'a') as sparsity_file:
             #          sparsity_file.write(f"{gstep_id} {nz}\n")
+
+            # Apply distloss regularizer
+            grid.inplace_distloss_grad(grid.density_data.grad,
+                                       rays,
+                                       scaling=1.0)
 
             # Apply TV/Sparsity regularizers
             if args.lambda_tv > 0.0: #USED
