@@ -1307,7 +1307,7 @@ void volume_render_cuvol_fused_distloss(
 
     //Add distortion loss kernel here!
     {
-        const int blocks = CUDA_N_BLOCKS_NEEDED(Q * WARP_SIZE, DISTLOSS_RAY_CUDA_THREADS); //Change
+        const int blocks = CUDA_N_BLOCKS_NEEDED(Q, DISTLOSS_RAY_CUDA_THREADS);
         device::distloss_kernel<<<blocks, DISTLOSS_RAY_CUDA_THREADS>>>(
                 grid,
                 rays,
