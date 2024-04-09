@@ -21,9 +21,7 @@ void volume_render_cuvol_backward(SparseGridSpec &, RaysSpec &, RenderOptions &,
                                   Tensor, Tensor, GridOutputGrads &);
 void volume_render_cuvol_fused(SparseGridSpec &, RaysSpec &, RenderOptions &,
                                Tensor, float, float, Tensor, GridOutputGrads &);
-//ADDED
-void volume_render_cuvol_fused_distloss(SparseGridSpec &, RaysSpec &, RenderOptions &,
-                               Tensor, float, float, Tensor, GridOutputGrads &);
+
 
 // Expected termination (depth) rendering
 torch::Tensor volume_render_expected_term(SparseGridSpec &, RaysSpec &,
@@ -60,6 +58,11 @@ void grid_weight_render(Tensor, CameraSpec &, float, float, bool, Tensor,
                         Tensor, Tensor);
 // void sample_cubemap(Tensor, Tensor, bool, Tensor);
 
+// Distloss
+void volume_render_cuvol_fused_distloss(SparseGridSpec &, RaysSpec &, RenderOptions &,
+                               Tensor, float, float, Tensor, GridOutputGrads &);
+void distloss_grad(SparseGridSpec&, RaysSpec&, RenderOptions&, GridOutputGrads&);
+
 // Loss
 Tensor tv(Tensor, Tensor, int, int, bool, float, bool, float, float);
 void tv_grad(Tensor, Tensor, int, int, float, bool, float, bool, float, float,
@@ -83,7 +86,6 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
   _REG_FUNC(volume_render_cuvol_image);
   _REG_FUNC(volume_render_cuvol_backward);
   _REG_FUNC(volume_render_cuvol_fused);
-  _REG_FUNC(volume_render_cuvol_fused_distloss); //CUSTOM
   _REG_FUNC(volume_render_expected_term);
   _REG_FUNC(volume_render_sigma_thresh);
 
@@ -97,6 +99,10 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
 
   // _REG_FUNC(volume_render_cuvol_image);
   // _REG_FUNC(volume_render_cuvol_image_backward);
+
+  // Distloss
+  _REG_FUNC(volume_render_cuvol_fused_distloss);
+  _REG_FUNC(distloss_grad);
 
   // Loss
   _REG_FUNC(tv);
