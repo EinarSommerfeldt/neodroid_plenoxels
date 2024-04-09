@@ -705,6 +705,8 @@ __global__ void distloss_kernel(
     }
     if(ray_id%1000 == 0)printf("total_steps: %d\n", total_steps[ray_blk_id]);
 
+    if(ray_id%1000 == 0)cudaDeviceSynchronize();
+
     delete[] weights;
     delete[] normalized_ray_pos;
 }
