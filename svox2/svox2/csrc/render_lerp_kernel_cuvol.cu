@@ -705,6 +705,7 @@ __global__ void distloss_kernel(
 
     delete[] weights;
     delete[] normalized_ray_pos;
+    __syncwarp((1U << min(DISTLOSS_RAY_CUDA_THREADS, WARP_SIZE)) - 1);
 }
 
 __launch_bounds__(TRACE_RAY_CUDA_THREADS, MIN_BLOCKS_PER_SM)
