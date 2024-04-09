@@ -1215,6 +1215,28 @@ class SparseGrid(nn.Module):
         self.sparse_sh_grad_indexer = self.sparse_grad_indexer.clone()
         return rgb_out
 
+    def inplace_distloss_grad(
+            self, rays: Rays, scaling: float = 1.0,):
+        
+        assert (
+            _C is not None and self.sh_data.is_cuda
+        ), "CUDA extension is currently required for inplace_distloss_grad"
+        assert rays.is_cuda
+
+        grad_density, grad_sh, grad_basis, grad_bg = self._get_data_grads()
+
+        grad_holder = _C.GridOutputGrads() # grad_holder object holds references to grads.
+        grad_holder.grad_density_out = grad_density
+
+        _C.distloss_grad(
+            self._to_cpp(),
+            rays._to_cpp(), 
+            self.opt._to_cpp,
+            scaling, 
+            grad_holder)
+        
+        return
+
     def volume_render_image(
         self, camera: Camera, use_kernel: bool = True, randomize: bool = False,
         batch_size : int = 5000,
