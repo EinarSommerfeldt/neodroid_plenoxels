@@ -667,6 +667,7 @@ void distloss_grad(
         SparseGridSpec& grid,
         RaysSpec& rays,
         RenderOptions& opt,
+        float scaling,
         GridOutputGrads& grads) {
 
     DEVICE_GUARD(grid.sh_data);
