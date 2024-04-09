@@ -74,6 +74,7 @@ __device__ __inline__ int trace_ray_distloss(
                 0);
         printf("sigma: %f\n", sigma);
         if (sigma > opt.sigma_thresh) {
+            if (i > ray_length) printf("out of bounds!\n");
             weights[i] = sigma;
             normalized_ray_pos[i] = (t-ray.tmin)/ray_length;
             i++;
@@ -1365,7 +1366,7 @@ void distloss_grad(
     rays.check();
     grads.check();
     const auto Q = rays.origins.size(0);
-    printf("distloss_kernel");
+    printf("distloss_kernel\n");
     
     const int blocks = CUDA_N_BLOCKS_NEEDED(Q, DISTLOSS_RAY_CUDA_THREADS);
     device::distloss_kernel<<<blocks, DISTLOSS_RAY_CUDA_THREADS>>>(
