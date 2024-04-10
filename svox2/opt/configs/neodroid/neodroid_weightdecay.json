@@ -1,7 +1,7 @@
 {
     "reso": "[[256, 256, 256]]",
     "n_iters": 15000,
-    "batch_size": 3000,
+    "batch_size": 500,
     "background_nlayers": 32,
     "background_reso": 512,
     "upsamp_every": 7500,
