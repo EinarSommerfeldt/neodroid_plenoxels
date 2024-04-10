@@ -65,7 +65,7 @@ __device__ __inline__ int trace_ray_distloss(
             t += ceilf(skip / opt.step_size) * opt.step_size;
             continue;
         }
-        printf("skip: %f (%d)\n", skip, ray_id);
+
         float sigma = trilerp_cuvol_one( 
                 grid.links, grid.density_data,
                 grid.stride_x,
@@ -73,10 +73,8 @@ __device__ __inline__ int trace_ray_distloss(
                 1,
                 ray.l, ray.pos,
                 0);
-        printf("sigma: %f (%d)\n", sigma, ray_id);
         
         if (sigma > opt.sigma_thresh) {
-            printf("add sigma at index %d (%d)\n",i, ray_id);
             weights[i] = sigma;
             normalized_ray_pos[i] = (t-ray.tmin)/ray_length;
             i++;
@@ -689,14 +687,13 @@ __global__ void distloss_kernel(
 
     ray_find_bounds(ray_spec[ray_blk_id], grid, opt, ray_id); // sets ray_spec tmin and tmax
     ray_length[ray_blk_id] = ray_spec[ray_blk_id].tmax - ray_spec[ray_blk_id].tmin;
+    if (ray_length[ray_blk_id] < 0) return;
+
     max_steps[ray_blk_id] = ceil(ray_length[ray_blk_id]/opt.step_size);
 
-    if(ray_id%1000 == 0) printf("weights[%d] (%d)\n", max_steps[ray_blk_id], ray_id);
     float* weights = new float[max_steps[ray_blk_id]]{0};
-    if(ray_id%1000 == 0) printf("normalized_ray_pos[%d] (%d)\n",max_steps[ray_blk_id], ray_id);
     float* normalized_ray_pos = new float[max_steps[ray_blk_id]]{0};
-    if(ray_id%1000 == 0)printf("trace_ray_distloss\n");
-    if (ray_id%1000 == 0) {
+
     total_steps[ray_blk_id] = trace_ray_distloss( 
         grid,
         ray_spec[ray_blk_id],
@@ -705,10 +702,8 @@ __global__ void distloss_kernel(
         weights,
         normalized_ray_pos,
         ray_id);
-    }
-    if(ray_id%1000 == 0)printf("total_steps: %d (%d)\n", total_steps[ray_blk_id], ray_id);
 
-    __syncwarp((1U << min(DISTLOSS_RAY_CUDA_THREADS, WARP_SIZE)) - 1);
+
     delete[] weights;
     delete[] normalized_ray_pos;
 }
