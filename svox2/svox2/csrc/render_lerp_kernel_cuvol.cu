@@ -1366,7 +1366,6 @@ void distloss_grad(
     rays.check();
     grads.check();
     const auto Q = rays.origins.size(0);
-    printf("distloss_kernel\n");
     
     const int blocks = CUDA_N_BLOCKS_NEEDED(Q, DISTLOSS_RAY_CUDA_THREADS);
     device::distloss_kernel<<<blocks, DISTLOSS_RAY_CUDA_THREADS>>>(
