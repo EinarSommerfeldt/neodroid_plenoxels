@@ -735,7 +735,7 @@ void distloss_forward_pass(
         float* __restrict__ wm_prefix,
         float& __restrict__ w_total,
         float& __restrict__ wm_total,
-        float& __restrict__ total_steps) {
+        int& __restrict__ total_steps) {
 
     wm[0] = weights[0]*midpoint_distances[0];
     wm[1] = weights[1]*midpoint_distances[1];
@@ -761,13 +761,13 @@ void distloss_backward_pass(
         float* __restrict__ wm_prefix,
         float& __restrict__ w_total,
         float& __restrict__ wm_total,
-        float& __restrict__ total_steps,
+        int& __restrict__ total_steps,
         //Output
         float* __restrict__ grad_arr) {
     
     for (int i{0}; i < total_steps; i++) {
         grad_arr[i] = ((1/3) * intervals[i] * 2 * weights[i]) //grad_uni
-            + 2 * (midpoint_distances[i] * (2*w_prefix[i] - weights[i] - w_total) + (-2* wm_prefix[i]) + wm_total + wm[i]) //grad_bi
+            + 2 * (midpoint_distances[i] * (2*w_prefix[i] - weights[i] - w_total) + (-2* wm_prefix[i]) + wm_total + wm[i]); //grad_bi
     }
 
 }
