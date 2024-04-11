@@ -93,6 +93,59 @@ __device__ __inline__ int trace_ray_distloss(
     return i;
 }
 
+
+__device__ __inline__ trace_ray_backward_distloss(
+        const PackedSparseGridSpec& __restrict__ grid,
+        const float* __restrict__ grad_arr,
+        SingleRaySpec& __restrict__ ray,
+        const RenderOptions& __restrict__ opt,
+        PackedGridOutputGrads& __restrict__ grads
+){
+    if (ray.tmin > ray.tmax) return;
+    float t = ray.tmin;
+    float i = 0;
+
+    while (t <= ray.tmax) {
+#pragma unroll 3
+        for (int j = 0; j < 3; ++j) {
+            ray.pos[j] = fmaf(t, ray.dir[j], ray.origin[j]);            // t * ray.dir + ray.origin
+            ray.pos[j] = min(max(ray.pos[j], 0.f), grid.size[j] - 1.f); //ray in [0, grid.size)
+            ray.l[j] = min(static_cast<int32_t>(ray.pos[j]), grid.size[j] - 2);
+            ray.pos[j] -= static_cast<float>(ray.l[j]);
+        }
+        const float skip = compute_skip_dist(ray,
+                       grid.links, grid.stride_x,
+                       grid.size[2], 0);
+        if (skip >= opt.step_size) {
+            // For consistency, we skip the by step size
+            t += ceilf(skip / opt.step_size) * opt.step_size;
+            continue;
+        }
+
+        float sigma = trilerp_cuvol_one(
+                grid.links,
+                grid.density_data,
+                grid.stride_x,
+                grid.size[2],
+                1,
+                ray.l, ray.pos,
+                0);
+
+        if (sigma > opt.sigma_thresh) {
+
+            trilerp_backward_cuvol_one_density( //update grads of all contributing voxels (density).
+                    grid.links,
+                    grads.grad_density_out,
+                    grads.mask_out,
+                    grid.stride_x,
+                    grid.size[2],
+                    ray.l, ray.pos, grad_arr[i]);
+            i++;
+        }
+        t += opt.step_size;
+    }
+}
+
 // * For ray rendering
 __device__ __inline__ void trace_ray_cuvol(
         const PackedSparseGridSpec& __restrict__ grid,
@@ -673,8 +726,54 @@ __device__ __inline__ void render_background_backward(
     }
 }
 
-// BEGIN KERNELS
+// adapted from https://github.com/sunset1995/torch_efficient_distloss/blob/main/torch_efficient_distloss/eff_distloss.py
+void distloss_forward_pass(
+        float* __restrict__ weights,
+        float* __restrict__ midpoint_distances,
+        float* __restrict__ wm,
+        float* __restrict__ w_prefix,
+        float* __restrict__ wm_prefix,
+        float& __restrict__ w_total,
+        float& __restrict__ wm_total,
+        float& __restrict__ total_steps) {
 
+    wm[0] = weights[0]*midpoint_distances[0];
+    wm[1] = weights[1]*midpoint_distances[1];
+
+    w_prefix[1] = weights[0];
+    wm_prefix[1] = wm[0];
+    for (int i{2}; i < total_steps; i++) {
+        wm[i] = weights[i]*midpoint_distances[i];
+        w_prefix[i] = w_prefix[i-1] + weights[i-1];
+        wm_prefix[i] = wm_prefix[i-1] + wm[i-1];
+    }
+    w_total  = w_prefix[total_steps-1] + weights[total_steps-1];
+    wm_total = wm_prefix[total_steps-1] + wm[total_steps-1];
+}
+
+// adapted from https://github.com/sunset1995/torch_efficient_distloss/blob/main/torch_efficient_distloss/eff_distloss.py
+void distloss_backward_pass(
+        float* __restrict__ weights,
+        float* __restrict__ midpoint_distances,
+        float* __restrict__ intervals,
+        float* __restrict__ wm,
+        float* __restrict__ w_prefix,
+        float* __restrict__ wm_prefix,
+        float& __restrict__ w_total,
+        float& __restrict__ wm_total,
+        float& __restrict__ total_steps,
+        //Output
+        float* __restrict__ grad_arr) {
+    
+    for (int i{0}; i < total_steps; i++) {
+        grad_arr[i] = ((1/3) * intervals[i] * 2 * weights[i]) //grad_uni
+            + 2 * (midpoint_distances[i] * (w_prefix[i] - w_suffix[i]) + (wm_suffix[i] - wm_prefix[i])) //grad_bi
+    }
+
+}
+
+
+// BEGIN KERNELS
 __launch_bounds__(DISTLOSS_RAY_CUDA_THREADS, 0)
 __global__ void distloss_kernel(
         PackedSparseGridSpec grid,
@@ -713,11 +812,59 @@ __global__ void distloss_kernel(
         midpoint_distances,
         intervals);
 
+    // Forward pass 
+    float* wm = new float[total_steps[ray_blk_id]]{0};
+
+    float* w_prefix = new float[total_steps[ray_blk_id]]{0};  // w_cumsum rightshifted 1
+    float* wm_prefix = new float[total_steps[ray_blk_id]]{0}; // wm_cumsum rightshifted 1
+
+    __shared__ float w_total[DISTLOSS_RAY_CUDA_THREADS];
+    __shared__ float wm_total[DISTLOSS_RAY_CUDA_THREADS];
+
+    // Fill arrays
+    distloss_forward_pass(
+        weights, 
+        midpoint_distances,
+        wm,
+        w_prefix,
+        wm_prefix,
+        w_total[ray_blk_id],
+        wm_total[ray_blk_id],
+        total_steps[ray_blk_id]);
     
+    // Fill grad_arr with gradients for each sample point
+    float* grad_arr = new float[total_steps[ray_blk_id]]{0};
+    distloss_backward_pass(
+        weights, 
+        midpoint_distances,
+        intervals,
+        wm,
+        w_prefix,
+        wm_prefix,
+        w_total[ray_blk_id],
+        wm_total[ray_blk_id],
+        total_steps[ray_blk_id],
+        //output
+        grad_arr);
+
+    // Apply gradients from each sample point to gradient voxels
+    trace_ray_backward_distloss(
+        grid,
+        grad_arr,
+        ray_spec[ray_blk_id],
+        opt,
+        grads
+    );
 
     delete[] weights;
     delete[] midpoint_distances;
     delete[] intervals;
+
+    delete[] wm;
+    delete[] w_prefix;
+    delete[] wm_prefix;
+
+    delete[] grad_arr;
 }
 
 __launch_bounds__(TRACE_RAY_CUDA_THREADS, MIN_BLOCKS_PER_SM)
