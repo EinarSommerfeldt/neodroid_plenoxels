@@ -94,7 +94,7 @@ __device__ __inline__ int trace_ray_distloss(
 }
 
 
-__device__ __inline__ trace_ray_backward_distloss(
+__device__ __inline__ void trace_ray_backward_distloss(
         const PackedSparseGridSpec& __restrict__ grid,
         const float* __restrict__ grad_arr,
         SingleRaySpec& __restrict__ ray,
@@ -103,7 +103,7 @@ __device__ __inline__ trace_ray_backward_distloss(
 ){
     if (ray.tmin > ray.tmax) return;
     float t = ray.tmin;
-    float i = 0;
+    int i = 0;
 
     while (t <= ray.tmax) {
 #pragma unroll 3
@@ -767,7 +767,7 @@ void distloss_backward_pass(
     
     for (int i{0}; i < total_steps; i++) {
         grad_arr[i] = ((1/3) * intervals[i] * 2 * weights[i]) //grad_uni
-            + 2 * (midpoint_distances[i] * (w_prefix[i] - w_suffix[i]) + (wm_suffix[i] - wm_prefix[i])) //grad_bi
+            + 2 * (midpoint_distances[i] * (2*w_prefix[i] - weights[i] - w_total) + (-2* wm_prefix[i]) + wm_total + wm[i]) //grad_bi
     }
 
 }
