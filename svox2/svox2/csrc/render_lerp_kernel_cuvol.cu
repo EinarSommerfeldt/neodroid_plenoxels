@@ -37,14 +37,15 @@ __device__ __inline__ int trace_ray_distloss(
         const RenderOptions& __restrict__ opt,
         const float& __restrict__ ray_length,
         float* __restrict__ weights,
-        float* __restrict__ normalized_ray_pos,
-        const int& ray_id) {
+        float* __restrict__ midpoint_distances,
+        float* __restrict__ intervals) {
 
     if (ray.tmin > ray.tmax) {
         return;
     }
 
     float t = ray.tmin;
+    float t_old = t;
     int i = 0;
 
     while (t <= ray.tmax) {
@@ -76,11 +77,19 @@ __device__ __inline__ int trace_ray_distloss(
         
         if (sigma > opt.sigma_thresh) {
             weights[i] = sigma;
-            normalized_ray_pos[i] = (t-ray.tmin)/ray_length;
+            if (i > 0) {
+                intervals[i-1] = (t - t_old)/ray_length; // s_{i+1} - s_i
+                midpoint_distances[i-1] = ((t + t_old)-2*ray.tmin)/(ray_length * 2); // (s_{i+1} + s_i)/2
+            }
+            
             i++;
         }
+        t_old  = t;
         t += opt.step_size;
     }
+    //assume last interval is step_size wide
+    intervals[i-1] = (t - t_old)/ray_length; // s_{N} + step_size - s_N
+    midpoint_distances[i-1] = ((t + t_old)-2*ray.tmin)/(ray_length * 2); // (s_{N} + step_size + s_N)/2
     return i;
 }
 
@@ -689,10 +698,11 @@ __global__ void distloss_kernel(
     ray_length[ray_blk_id] = ray_spec[ray_blk_id].tmax - ray_spec[ray_blk_id].tmin;
     if (ray_length[ray_blk_id] < 0) return;
 
-    max_steps[ray_blk_id] = ceil(ray_length[ray_blk_id]/opt.step_size);
+    max_steps[ray_blk_id] = ceil(ray_length[ray_blk_id]/opt.step_size)+1;
 
     float* weights = new float[max_steps[ray_blk_id]]{0};
-    float* normalized_ray_pos = new float[max_steps[ray_blk_id]]{0};
+    float* midpoint_distances = new float[max_steps[ray_blk_id]]{0};
+    float* intervals = new float[max_steps[ray_blk_id]]{0};
 
     total_steps[ray_blk_id] = trace_ray_distloss( 
         grid,
@@ -700,12 +710,14 @@ __global__ void distloss_kernel(
         opt,
         ray_length[ray_blk_id],
         weights,
-        normalized_ray_pos,
-        ray_id);
+        midpoint_distances,
+        intervals);
 
+    
 
     delete[] weights;
-    delete[] normalized_ray_pos;
+    delete[] midpoint_distances;
+    delete[] intervals;
 }
 
 __launch_bounds__(TRACE_RAY_CUDA_THREADS, MIN_BLOCKS_PER_SM)
