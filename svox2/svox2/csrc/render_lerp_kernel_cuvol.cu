@@ -727,7 +727,7 @@ __device__ __inline__ void render_background_backward(
 }
 
 // adapted from https://github.com/sunset1995/torch_efficient_distloss/blob/main/torch_efficient_distloss/eff_distloss.py
-void distloss_forward_pass(
+__device__ __inline__ void distloss_forward_pass(
         float* __restrict__ weights,
         float* __restrict__ midpoint_distances,
         float* __restrict__ wm,
@@ -752,7 +752,7 @@ void distloss_forward_pass(
 }
 
 // adapted from https://github.com/sunset1995/torch_efficient_distloss/blob/main/torch_efficient_distloss/eff_distloss.py
-void distloss_backward_pass(
+__device__ __inline__ void distloss_backward_pass(
         float* __restrict__ weights,
         float* __restrict__ midpoint_distances,
         float* __restrict__ intervals,
