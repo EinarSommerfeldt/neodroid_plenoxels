@@ -762,11 +762,12 @@ __device__ __inline__ void distloss_backward_pass(
         float& __restrict__ w_total,
         float& __restrict__ wm_total,
         int& __restrict__ total_steps,
+        const float& __restrict__ scaling,
         //Output
         float* __restrict__ grad_arr) {
     
     for (int i{0}; i < total_steps; i++) {
-        grad_arr[i] = ((1/3) * intervals[i] * 2 * weights[i]) //grad_uni
+        grad_arr[i] = scaling*((1/3) * intervals[i] * 2 * weights[i]) //grad_uni
             + 2 * (midpoint_distances[i] * (2*w_prefix[i] - weights[i] - w_total) + (-2* wm_prefix[i]) + wm_total + wm[i]); //grad_bi
     }
 
@@ -779,6 +780,7 @@ __global__ void distloss_kernel(
         PackedSparseGridSpec grid,
         PackedRaysSpec rays,
         RenderOptions opt,
+        float scaling,
         PackedGridOutputGrads grads) {
 
     CUDA_GET_THREAD_ID(tid, int(rays.origins.size(0)) * WARP_SIZE); //Global thread id? (E)
@@ -844,6 +846,7 @@ __global__ void distloss_kernel(
         w_total[ray_blk_id],
         wm_total[ray_blk_id],
         total_steps[ray_blk_id],
+        scaling,
         //output
         grad_arr);
 
@@ -1413,106 +1416,6 @@ void volume_render_cuvol_fused(
     CUDA_CHECK_ERRORS;
 }
 
-void volume_render_cuvol_fused_distloss(
-        SparseGridSpec& grid,
-        RaysSpec& rays,
-        RenderOptions& opt,
-        torch::Tensor rgb_gt,
-        float beta_loss,
-        float sparsity_loss,
-        torch::Tensor rgb_out,
-        GridOutputGrads& grads) {
-
-    DEVICE_GUARD(grid.sh_data);
-    CHECK_INPUT(rgb_gt);
-    CHECK_INPUT(rgb_out);
-    grid.check();
-    rays.check();
-    grads.check();
-    const auto Q = rays.origins.size(0);
-
-    bool use_background = grid.background_links.defined() &&
-                          grid.background_links.size(0) > 0; //true?(E)
-    bool need_log_transmit = use_background || beta_loss > 0.f;
-    torch::Tensor log_transmit, accum;
-    if (need_log_transmit) {
-        log_transmit = _get_empty_1d(rays.origins);
-    }
-    if (use_background) {
-        accum = _get_empty_1d(rays.origins);
-    }
-
-    //Create distortion loss quadratic form matrix and weight vector
-    //torch::Tensor** p_quad_mat_arr = new torch::Tensor*[rays.origins.size(0)]; //CANT BE THIS BIG!!!
-    //torch::Tensor** p_weights_arr = new torch::Tensor*[rays.origins.size(0)];
-
-    {
-        const int blocks = CUDA_N_BLOCKS_NEEDED(Q * WARP_SIZE, TRACE_RAY_CUDA_THREADS);
-        device::render_ray_kernel<<<blocks, TRACE_RAY_CUDA_THREADS>>>( //Each block does 4 rays of 32 threads
-                grid, rays, opt,
-                // Output
-                rgb_out.packed_accessor32<float, 2, torch::RestrictPtrTraits>(),
-                need_log_transmit ? log_transmit.data_ptr<float>() : nullptr);
-    }
-
-    if (use_background) {
-        const int blocks = CUDA_N_BLOCKS_NEEDED(Q, TRACE_RAY_BG_CUDA_THREADS);
-        device::render_background_kernel<<<blocks, TRACE_RAY_BG_CUDA_THREADS>>>(
-                grid,
-                rays,
-                opt,
-                log_transmit.data_ptr<float>(),
-                //Output? (E)
-                rgb_out.packed_accessor32<float, 2, torch::RestrictPtrTraits>());
-    }
-
-    //Add distortion loss kernel here!
-    {
-        const int blocks = CUDA_N_BLOCKS_NEEDED(Q, DISTLOSS_RAY_CUDA_THREADS);
-        device::distloss_kernel<<<blocks, DISTLOSS_RAY_CUDA_THREADS>>>(
-                grid,
-                rays,
-                opt,
-                //Output
-                grads);
-    }
-
-    {
-        const int blocks = CUDA_N_BLOCKS_NEEDED(Q * WARP_SIZE, TRACE_RAY_BKWD_CUDA_THREADS);
-        device::render_ray_backward_kernel<<<blocks, TRACE_RAY_BKWD_CUDA_THREADS>>>(
-                grid,
-                rgb_gt.data_ptr<float>(),
-                rgb_out.data_ptr<float>(),
-                rays, opt,
-                true,
-                beta_loss > 0.f ? log_transmit.data_ptr<float>() : nullptr,
-                beta_loss / Q,
-                sparsity_loss,
-                // Output
-                grads,
-                use_background ? accum.data_ptr<float>() : nullptr,
-                nullptr);
-    }
-
-    if (use_background) {
-        const int blocks = CUDA_N_BLOCKS_NEEDED(Q, TRACE_RAY_BG_CUDA_THREADS);
-        device::render_background_backward_kernel<<<blocks, TRACE_RAY_BG_CUDA_THREADS>>>(
-                grid,
-                rgb_gt.data_ptr<float>(),
-                rgb_out.data_ptr<float>(),
-                rays,
-                opt,
-                log_transmit.data_ptr<float>(),
-                accum.data_ptr<float>(),
-                true,
-                sparsity_loss,
-                // Output
-                grads);
-    }
-    printf("volume_render_cuvol_fused_distloss finished");
-    CUDA_CHECK_ERRORS;
-}
-
 void distloss_grad(
         SparseGridSpec& grid,
         RaysSpec& rays,
@@ -1531,6 +1434,7 @@ void distloss_grad(
             grid,
             rays,
             opt,
+            scaling,
             //Output
             grads);
             
