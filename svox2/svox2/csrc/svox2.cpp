@@ -59,8 +59,6 @@ void grid_weight_render(Tensor, CameraSpec &, float, float, bool, Tensor,
 // void sample_cubemap(Tensor, Tensor, bool, Tensor);
 
 // Distloss
-void volume_render_cuvol_fused_distloss(SparseGridSpec &, RaysSpec &, RenderOptions &,
-                               Tensor, float, float, Tensor, GridOutputGrads &);
 void distloss_grad(SparseGridSpec&, RaysSpec&, RenderOptions&, float, GridOutputGrads&);
 
 // Loss
@@ -101,7 +99,6 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
   // _REG_FUNC(volume_render_cuvol_image_backward);
 
   // Distloss
-  _REG_FUNC(volume_render_cuvol_fused_distloss);
   _REG_FUNC(distloss_grad);
 
   // Loss
