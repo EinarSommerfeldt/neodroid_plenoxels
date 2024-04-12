@@ -553,9 +553,10 @@ while True:
             #      with open(os.path.join(args.train_dir, 'grad_sparsity.txt'), 'a') as sparsity_file:
             #          sparsity_file.write(f"{gstep_id} {nz}\n")
 
+            print("grad mean pre distloss: ", torch.mean(grid.density_data.grad, [0,1]))
             # Apply distloss regularizer
             grid.inplace_distloss_grad(rays, scaling = 1.0)
-
+            print("grad mean post distloss: ", torch.mean(grid.density_data.grad, [0,1]))
             # Apply TV/Sparsity regularizers
             if args.lambda_tv > 0.0: #USED
                 #  with Timing("tv_inpl"):
