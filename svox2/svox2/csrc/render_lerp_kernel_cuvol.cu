@@ -99,6 +99,7 @@ __device__ __inline__ void trace_ray_backward_distloss(
         const float* __restrict__ grad_arr,
         SingleRaySpec& __restrict__ ray,
         const RenderOptions& __restrict__ opt,
+        float* __restrict__ weights,
         PackedGridOutputGrads& __restrict__ grads
 ){
     if (ray.tmin > ray.tmax) return;
@@ -132,6 +133,9 @@ __device__ __inline__ void trace_ray_backward_distloss(
                 0);
 
         if (sigma > opt.sigma_thresh) {
+            if (sigma != weights[i]) {
+                printf("sigma: %f, weights[i]: %f", sigma, weights[i]);
+            }
             // update grads of all contributing voxels
             trilerp_backward_cuvol_one_density(     
                     grid.links,                     // links
@@ -856,6 +860,7 @@ __global__ void distloss_kernel(
         grad_arr,
         ray_spec[ray_blk_id],
         opt,
+        weights,
         grads
     );
 
