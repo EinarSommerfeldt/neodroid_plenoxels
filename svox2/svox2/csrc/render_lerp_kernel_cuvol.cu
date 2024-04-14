@@ -768,7 +768,7 @@ __device__ __inline__ void distloss_backward_pass(
         float* __restrict__ grad_arr) {
     
     for (int i{0}; i < total_steps; i++) {
-        grad_arr[i] = scaling*((1/3) * intervals[i] * 2 * weights[i]) //grad_uni
+        grad_arr[i] = -scaling*((1/3) * intervals[i] * 2 * weights[i]) //grad_uni
             + 2 * (midpoint_distances[i] * (2*w_prefix[i] - weights[i] - w_total) + (-2* wm_prefix[i]) + wm_total + wm[i]); //grad_bi
     }
 
