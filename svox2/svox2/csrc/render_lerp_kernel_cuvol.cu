@@ -133,9 +133,6 @@ __device__ __inline__ void trace_ray_backward_distloss(
                 0);
 
         if (sigma > opt.sigma_thresh) {
-            if (sigma != weights[i]) {
-                printf("sigma: %f, weights[i]: %f", sigma, weights[i]);
-            }
             // update grads of all contributing voxels
             trilerp_backward_cuvol_one_density(     
                     grid.links,                     // links
