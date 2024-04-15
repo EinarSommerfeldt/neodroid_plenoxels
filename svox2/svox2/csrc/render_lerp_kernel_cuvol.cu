@@ -864,7 +864,7 @@ __global__ void distloss_kernel(
         wm_total[ray_blk_id],
         total_steps[ray_blk_id],
         scaling,
-        sparsity
+        sparsity,
         //output
         grad_arr);
 
