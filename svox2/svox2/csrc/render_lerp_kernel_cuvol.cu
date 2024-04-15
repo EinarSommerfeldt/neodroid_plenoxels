@@ -125,7 +125,7 @@ __device__ __inline__ void trace_ray_backward_distloss(
                 1,
                 ray.l, ray.pos,
                 0);
-        printf("world step: %f, opt step: %f\n", ray.world_step, opt.step_size);
+                
         if (sigma > opt.sigma_thresh) {
             // update grads of all contributing voxels
             trilerp_backward_cuvol_one_density(     
