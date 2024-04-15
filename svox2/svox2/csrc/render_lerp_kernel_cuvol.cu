@@ -46,6 +46,7 @@ __device__ __inline__ int trace_ray_distloss(
 
     float t = ray.tmin;
     int i = 0;
+    float log_transmit = 0.f; // T_i
 
     while (t <= ray.tmax) {
 #pragma unroll 3
@@ -75,7 +76,11 @@ __device__ __inline__ int trace_ray_distloss(
                 0);
 
         if (sigma > opt.sigma_thresh) {
-            weights[i] = sigma;
+            const float pcnt = ray.world_step * sigma;
+            const float weight = _EXP(log_transmit) * (1.f - _EXP(-pcnt));
+            log_transmit -= pcnt;
+
+            weights[i] = weight;
             intervals[i] = opt.step_size/ray_length;
             midpoint_distances[i] = (t + opt.step_size - ray.tmin)/ray_length;
             i++;
@@ -97,8 +102,10 @@ __device__ __inline__ void trace_ray_backward_distloss(
         PackedGridOutputGrads& __restrict__ grads
 ){
     if (ray.tmin > ray.tmax) return;
+
     float t = ray.tmin;
     int i = 0;
+    float log_transmit = 0.f; //T_i
 
     while (t <= ray.tmax) {
 #pragma unroll 3
@@ -127,6 +134,11 @@ __device__ __inline__ void trace_ray_backward_distloss(
                 0);
 
         if (sigma > opt.sigma_thresh) {
+            const float pcnt = ray.world_step * sigma; // delta_i * sigma_i
+            log_transmit -= pcnt;
+            float dw_dsigma = _EXP(log_transmit)*ray.world_step*_EXP(-pcnt);
+            float curr_grad_sigma = grad_arr[i]*dw_dsigma;
+
             // update grads of all contributing voxels
             trilerp_backward_cuvol_one_density(     
                     grid.links,                     // links
@@ -134,7 +146,7 @@ __device__ __inline__ void trace_ray_backward_distloss(
                     grads.mask_out,                 // mask_out
                     grid.stride_x,                  // offx
                     grid.size[2],                   // offy
-                    ray.l, ray.pos, grad_arr[i]);   // l, pos, grad_out
+                    ray.l, ray.pos, curr_grad_sigma);   // l, pos, grad_out
             i++;
         }
         t += opt.step_size;
