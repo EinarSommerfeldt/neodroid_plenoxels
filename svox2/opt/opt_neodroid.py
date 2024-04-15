@@ -235,7 +235,7 @@ group.add_argument('--lambda_tv_basis', type=float, default=0.0,
 # End Basis TV
 
 # Distortion loss
-group.add_argument('--distloss', type=float, default=1e-2)
+group.add_argument('--distloss', type=float, default=0.0)
 group.add_argument('--distloss_nosparsity', action='store_true', default=False)
 
 group.add_argument('--weight_decay_sigma', type=float, default=1.0)
