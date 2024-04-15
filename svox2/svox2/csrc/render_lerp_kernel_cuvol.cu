@@ -855,7 +855,7 @@ __global__ void distloss_kernel(
         grads
     );
     float total = 0;
-    for (int i{0}; i < total_steps; i++) {
+    for (int i{0}; i < total_steps[ray_blk_id]; i++) {
         total += weights[i];
     }
     printf("total: %f\n", total);
