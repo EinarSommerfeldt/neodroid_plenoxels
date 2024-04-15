@@ -125,7 +125,7 @@ __device__ __inline__ void trace_ray_backward_distloss(
                 1,
                 ray.l, ray.pos,
                 0);
-                
+
         if (sigma > opt.sigma_thresh) {
             // update grads of all contributing voxels
             trilerp_backward_cuvol_one_density(     
@@ -854,7 +854,11 @@ __global__ void distloss_kernel(
         weights,
         grads
     );
-
+    float total = 0;
+    for (int i{0}; i < total_steps; i++) {
+        total += weights[i];
+    }
+    printf("total: %f\n", total);
     delete[] weights;
     delete[] midpoint_distances;
     delete[] intervals;
