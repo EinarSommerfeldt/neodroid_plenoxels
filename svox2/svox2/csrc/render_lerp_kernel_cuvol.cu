@@ -80,11 +80,12 @@ __device__ __inline__ int trace_ray_distloss(
             if (i > 0) {
                 intervals[i-1] = (t - t_old)/ray_length; // s_{i+1} - s_i
                 midpoint_distances[i-1] = ((t + t_old)-2*ray.tmin)/(ray_length * 2); // (s_{i+1} + s_i)/2
+                t_old  = t;
             }
             
             i++;
         }
-        t_old  = t;
+        
         t += opt.step_size;
     }
     //assume last interval is step_size wide
