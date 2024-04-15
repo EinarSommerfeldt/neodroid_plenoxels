@@ -1216,7 +1216,7 @@ class SparseGrid(nn.Module):
         return rgb_out
 
     def inplace_distloss_grad(
-            self, rays: Rays, scaling: float = 1.0,):
+            self, rays: Rays, scaling: float = 1.0, sparsity = True):
         
         assert (
             _C is not None and self.sh_data.is_cuda
@@ -1233,6 +1233,7 @@ class SparseGrid(nn.Module):
             rays._to_cpp(), 
             self.opt._to_cpp(),
             scaling, 
+            sparsity,
             grad_holder)
         
         return

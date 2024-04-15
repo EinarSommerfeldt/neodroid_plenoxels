@@ -770,13 +770,22 @@ __device__ __inline__ void distloss_backward_pass(
         float& __restrict__ wm_total,
         int& __restrict__ total_steps,
         const float& __restrict__ scaling,
+        const bool& __restrict__ sparsity,
         //Output
         float* __restrict__ grad_arr) {
-    
-    for (int i{0}; i < total_steps; i++) {
-        grad_arr[i] = scaling*((1/3) * intervals[i] * 2 * weights[i] //grad_uni
-            + 2 * (midpoint_distances[i] * (2*w_prefix[i] - weights[i] - w_total) + (-2* wm_prefix[i]) + wm_total + wm[i])); //grad_bi
+    if (sparsity) {
+        for (int i{0}; i < total_steps; i++) {
+            grad_arr[i] = scaling*((1/3) * intervals[i] * 2 * weights[i] //grad_uni
+                + 2 * (midpoint_distances[i] * (2*w_prefix[i] - weights[i] - w_total) 
+                + (-2* wm_prefix[i]) + wm_total + wm[i])); //grad_bi
+        }
+    } else {
+        for (int i{0}; i < total_steps; i++) {
+            grad_arr[i] = scaling*(2 * (midpoint_distances[i] * (2*w_prefix[i] - weights[i] - w_total) 
+                + (-2* wm_prefix[i]) + wm_total + wm[i])); //grad_bi only
+        }
     }
+    
 
 }
 
@@ -788,6 +797,7 @@ __global__ void distloss_kernel(
         PackedRaysSpec rays,
         RenderOptions opt,
         float scaling,
+        bool sparsity,
         PackedGridOutputGrads grads) {
 
     CUDA_GET_THREAD_ID(tid, int(rays.origins.size(0))); 
@@ -854,6 +864,7 @@ __global__ void distloss_kernel(
         wm_total[ray_blk_id],
         total_steps[ray_blk_id],
         scaling,
+        sparsity
         //output
         grad_arr);
 
@@ -1429,6 +1440,7 @@ void distloss_grad(
         RaysSpec& rays,
         RenderOptions& opt,
         float scaling,
+        bool sparsity,
         GridOutputGrads& grads) {
 
     DEVICE_GUARD(grid.sh_data);
@@ -1443,6 +1455,7 @@ void distloss_grad(
             rays,
             opt,
             scaling,
+            sparsity,
             //Output
             grads);
             

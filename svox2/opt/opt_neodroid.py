@@ -236,6 +236,7 @@ group.add_argument('--lambda_tv_basis', type=float, default=0.0,
 
 # Distortion loss
 group.add_argument('--distloss', type=float, default=1e-2)
+group.add_argument('--distloss_nosparsity', action='store_true', default=False)
 
 group.add_argument('--weight_decay_sigma', type=float, default=1.0)
 group.add_argument('--weight_decay_sh', type=float, default=1.0)
@@ -558,7 +559,7 @@ while True:
 
             # Apply distloss regularizer
             if args.distloss > 0:
-                grid.inplace_distloss_grad(rays, scaling = args.distloss)
+                grid.inplace_distloss_grad(rays, scaling = args.distloss, sparsity = not args.distloss_nosparsity)
 
             # Apply TV/Sparsity regularizers
             if args.lambda_tv > 0.0: #USED

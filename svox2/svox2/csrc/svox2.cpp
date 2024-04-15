@@ -59,7 +59,7 @@ void grid_weight_render(Tensor, CameraSpec &, float, float, bool, Tensor,
 // void sample_cubemap(Tensor, Tensor, bool, Tensor);
 
 // Distloss
-void distloss_grad(SparseGridSpec&, RaysSpec&, RenderOptions&, float, GridOutputGrads&);
+void distloss_grad(SparseGridSpec&, RaysSpec&, RenderOptions&, float, bool, GridOutputGrads&);
 
 // Loss
 Tensor tv(Tensor, Tensor, int, int, bool, float, bool, float, float);
