@@ -45,7 +45,6 @@ __device__ __inline__ int trace_ray_distloss(
     }
 
     float t = ray.tmin;
-    float t_old = t;
     int i = 0;
 
     while (t <= ray.tmax) {
@@ -74,23 +73,17 @@ __device__ __inline__ int trace_ray_distloss(
                 1,
                 ray.l, ray.pos,
                 0);
-        
+
         if (sigma > opt.sigma_thresh) {
             weights[i] = sigma;
-            if (i > 0) {
-                intervals[i-1] = (t - t_old)/ray_length; // s_{i+1} - s_i
-                midpoint_distances[i-1] = ((t + t_old)-2*ray.tmin)/(ray_length * 2); // (s_{i+1} + s_i)/2
-                t_old  = t;
-            }
-            
+            intervals[i] = opt.step_size/ray_length;
+            midpoint_distances[i] = (t + opt.step_size - ray.tmin)/ray_length;
             i++;
         }
-        
+
         t += opt.step_size;
     }
-    //assume last interval is step_size wide
-    intervals[i-1] = (t - t_old)/ray_length; // s_{N} + step_size - s_N
-    midpoint_distances[i-1] = ((t + t_old)-2*ray.tmin)/(ray_length * 2); // (s_{N} + step_size + s_N)/2
+
     return i;
 }
 
