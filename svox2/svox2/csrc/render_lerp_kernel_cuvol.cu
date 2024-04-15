@@ -125,7 +125,7 @@ __device__ __inline__ void trace_ray_backward_distloss(
                 1,
                 ray.l, ray.pos,
                 0);
-
+        printf("world step: %f, opt step: %f\n", ray.world_step, opt.step_size);
         if (sigma > opt.sigma_thresh) {
             // update grads of all contributing voxels
             trilerp_backward_cuvol_one_density(     
@@ -778,7 +778,7 @@ __global__ void distloss_kernel(
         float scaling,
         PackedGridOutputGrads grads) {
 
-    CUDA_GET_THREAD_ID(tid, int(rays.origins.size(0)) * WARP_SIZE); //Global thread id? (E)
+    CUDA_GET_THREAD_ID(tid, int(rays.origins.size(0))); 
     const int ray_id = tid;                // Global ray id
     const int ray_blk_id = threadIdx.x;    // Local ray id, threadIdx.x is threadid local to block
     
