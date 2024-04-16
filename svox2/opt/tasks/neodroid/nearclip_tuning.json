@@ -1,0 +1,18 @@
+{
+    "eval": true,
+    "data_root": "/cluster/home/einarjso/local_datasets",
+    "train_root": "/cluster/home/einarjso/neodroid_plenoxels/svox2/opt/ckpt/nearclip_tuning_15_04",
+    "variables": {
+        "near_clip": [0, 1, 5, 10, 50, 100]
+    },
+    "tasks": [{
+        "train_dir": "near_clip_{near_clip}",
+        "data_dir": "fruit_roi_scale4_backup",
+        "flags": [
+            "--near_clip", "{near_clip}"
+        ],
+        "common_flags": [
+            "--config", "/cluster/home/einarjso/neodroid_plenoxels/svox2/opt/configs/neodroid/neodroid_weightdecay.json"
+        ]
+    }]
+}

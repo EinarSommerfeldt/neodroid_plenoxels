@@ -1,39 +1,19 @@
 {
-    "eval": false,
-    "data_root": "/cluster/home/einarjso/local_datasets/",
-    "train_root": "/cluster/home/einarjso/neodroid_plenoxels/svox2/opt/ckpt/distloss",
+    "eval": true,
+    "data_root": "/cluster/home/einarjso/local_datasets",
+    "train_root": "/cluster/home/einarjso/neodroid_plenoxels/svox2/opt/ckpt/distloss_tuning_nospars_15_04",
     "variables": {
         "distloss": [0.0001, 0.001, 0.01, 0.1, 1]
     },
     "tasks": [{
         "train_dir": "distloss_{distloss}",
-        "data_dir": "fruit_roi_scale4",
+        "data_dir": "fruit_roi_scale4_backup",
         "flags": [
             "--distloss", "{distloss}"
         ],
         "common_flags": [
-            "--reso", "[[256, 256, 256]]",
-            "--n_iters", "15000",
-            "--batch_size", "500",
-            "--background_nlayers", "32",
-            "--background_reso", "512",
-            "--upsamp_every", "7500",
-            "--lr_sigma", "3e1",
-            "--lr_sh", "1e-2",
-            "--near_clip", "0.35",
-            "--lr_sigma_delay_steps", "3000",
-            "--thresh_type", "weight",
-            "--weight_thresh", "1.28",
-            "--lambda_tv", "5e-5",
-            "--lambda_tv_sh", "5e-3",
-            "--lambda_tv_background_sigma", "1e-3",
-            "--lambda_tv_background_color", "1e-3",
-            "--lambda_beta", "1e-5",
-            "--lambda_sparsity", "1e-11",
-            "--background_brightness", "1.0",
-            "--tv_early_only", "0",
-
-            "--weight_decay_sigma","0.8"
+            "--config", "/cluster/home/einarjso/neodroid_plenoxels/svox2/opt/configs/neodroid/neodroid_weightdecay.json",
+            "--distloss_nosparsity"
         ]
     }]
 }
