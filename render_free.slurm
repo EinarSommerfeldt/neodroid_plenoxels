@@ -1,13 +1,13 @@
 #!/bin/sh
 #SBATCH --partition=GPUQ
 #SBATCH --account=ie-idi 
-#SBATCH --time=00:30:00
+#SBATCH --time=00:15:00
 #SBATCH --nodes=1 
 #SBATCH --ntasks-per-node=1
-#SBATCH --mem=8G
+#SBATCH --mem=16G
 #SBATCH --gres=gpu:1
-#SBATCH --job-name=plenoxels_lh_dist
-#SBATCH --output=/cluster/home/einarjso/neodroid_plenoxels/output/training/JOB%j.out
+#SBATCH --job-name=render_free
+#SBATCH --output=/cluster/home/einarjso/neodroid_plenoxels/output/render/JOB%j.out
 echo "we are running from this directory: $SLURM_SUBMIT_DIR"
 echo "the name of the job is: $SLURM_JOB_NAME"
 echo "The job ID is $SLURM_JOB_ID"
@@ -23,7 +23,6 @@ nvidia-smi topo -m
 module purge
 module load PyTorch/1.12.1-foss-2022a-CUDA-11.7.0
 
-
 cd /cluster/home/einarjso/neodroid_plenoxels/svox2/opt
-./launch_neodroid.sh lighthouse_distloss_15_04 0 /cluster/home/einarjso/local_datasets/lighthouse_NSVF -c /cluster/home/einarjso/neodroid_plenoxels/svox2/opt/configs/neodroid/neodroid_weightdecay.json --distloss 0.001
-tail -f ckpt/lighthouse_distloss_15_04/log
+##--elevation -15.0 --traj_type circle --vert_shift -0.3
+python render_imgs_circle.py /cluster/home/einarjso/neodroid_plenoxels/svox2/opt/ckpt/nearclip_tuning_15_04/near_clip_50 /cluster/home/einarjso/local_datasets/fruit_roi_scale4_backup

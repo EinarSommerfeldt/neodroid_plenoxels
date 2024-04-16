@@ -1,7 +1,7 @@
 #!/bin/sh
 #SBATCH --partition=GPUQ
 #SBATCH --account=ie-idi 
-#SBATCH --time=00:10:00
+#SBATCH --time=02:00:00
 #SBATCH --nodes=1 
 #SBATCH --ntasks-per-node=1
 #SBATCH --mem=8G
@@ -24,4 +24,4 @@ module purge
 module load PyTorch/1.12.1-foss-2022a-CUDA-11.7.0
 
 cd /cluster/home/einarjso/neodroid_plenoxels/svox2/opt
-python autotune.py -g '0' tasks/neodroid/distloss_tuning.json
+python autotune_neodroid.py -g '0' tasks/neodroid/distloss_tuning.json

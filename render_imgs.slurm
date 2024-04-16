@@ -4,7 +4,7 @@
 #SBATCH --time=00:30:00
 #SBATCH --nodes=1 
 #SBATCH --ntasks-per-node=1
-#SBATCH --mem=8G
+#SBATCH --mem=16G
 #SBATCH --gres=gpu:1
 #SBATCH --job-name=render
 #SBATCH --output=/cluster/home/einarjso/neodroid_plenoxels/output/render/JOB%j.out
@@ -23,6 +23,6 @@ nvidia-smi topo -m
 module purge
 module load PyTorch/1.12.1-foss-2022a-CUDA-11.7.0
 
-
 cd /cluster/home/einarjso/neodroid_plenoxels/svox2/opt
-python render_imgs_circle.py ckpt/fruit_roi_scale4/ckpt.npz /cluster/home/einarjso/local_datasets/fruit_roi_scale4
+##--elevation -15.0 --traj_type circle --vert_shift -0.3
+python render_imgs.py /cluster/home/einarjso/neodroid_plenoxels/svox2/opt/ckpt/distloss_weightgrad_15_04 /cluster/home/einarjso/local_datasets/fruit_roi_scale4_backup --fps 2
