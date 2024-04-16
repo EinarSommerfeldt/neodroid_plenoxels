@@ -34,7 +34,7 @@ parser.add_argument('--timing',
                     "still computes PSNR to make sure images are being generated)")
 parser.add_argument('--no_lpips',
                     action='store_true',
-                    default=False,
+                    default=True,
                     help="Disable LPIPS (faster load)")
 parser.add_argument('--no_vid',
                     action='store_true',
@@ -77,7 +77,7 @@ parser.add_argument('--ray_len',
 
 args = parser.parse_args()
 config_util.maybe_merge_config_file(args, allow_invalid=True)
-device = 'cuda:2'
+device = 'cuda:0'
 
 if args.timing:
     args.no_lpips = True
