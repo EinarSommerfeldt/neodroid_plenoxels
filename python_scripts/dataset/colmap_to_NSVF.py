@@ -6,7 +6,7 @@ import cv2 as cv
 from PIL import Image, ExifTags
 
 SCALING_FACTOR = 4 #Images will be downscaled by SCALING_FACTOR
-DATASET_SPLIT = np.array([100,10,10])
+DATASET_SPLIT = np.array([80,120,100])
 
 # Image list with two lines of data per image:
 #   IMAGE_ID, QW, QX, QY, QZ, TX, TY, TZ, CAMERA_ID, NAME
@@ -64,7 +64,7 @@ def populate_pose(output_folder, img_info, prefix):
         np.savetxt(output_folder+f"/pose/{prefix}{n:0=4}.txt", T, fmt="%1.9f")
     return 1
 
-def populate_rgb(output_folder, image_folder, calibration_folder, img_info, prefix):
+def populate_rgb(output_folder, image_folder, calibration_folder, img_info, prefix, use_exif = False):
     K = np.loadtxt(calibration_folder +'/K.txt')/SCALING_FACTOR
     K[2,2] = 1
     DC = np.loadtxt(calibration_folder + '/dc.txt')
@@ -74,20 +74,23 @@ def populate_rgb(output_folder, image_folder, calibration_folder, img_info, pref
         #Copy images
         img_path = image_folder + "/" + NAME
         
+        
         orig_img = Image.open(img_path)
         resized_img = orig_img.resize((orig_img.size[0]//SCALING_FACTOR, orig_img.size[1]//SCALING_FACTOR))
-        #Find correct tag 
-        for orientation in ExifTags.TAGS.keys():
-            if ExifTags.TAGS[orientation]=='Orientation':
-                break
         
-        exif = resized_img.getexif()
+        if use_exif:
+            #Find correct tag 
+            for orientation in ExifTags.TAGS.keys():
+                if ExifTags.TAGS[orientation]=='Orientation':
+                    break
+            
+            exif = resized_img.getexif()
 
-        #Rotate images correctly
-        if exif[orientation] == 6:
-            resized_img=resized_img.rotate(90, expand=True)
-        elif exif[orientation] == 8:
-            resized_img=resized_img.rotate(270, expand=True)
+            #Rotate images correctly
+            if exif[orientation] == 6:
+                resized_img=resized_img.rotate(90, expand=True)
+            elif exif[orientation] == 8:
+                resized_img=resized_img.rotate(270, expand=True)
 
         output_path = output_folder+f"/rgb/{prefix}{n:0=4}.png"
         resized_img.save(output_path)
@@ -133,7 +136,7 @@ def create_intrinsics(calibration_folder, output_folder):
 
     np.savetxt(output_folder+f"/intrinsics.txt", K, fmt="%1.6f")
 
-def colmap_to_NSVF(output_folder, image_folder, calibration_folder, imagestxt_path):
+def colmap_to_NSVF(output_folder, image_folder, calibration_folder, imagestxt_path, use_exif = False):
     random.seed(10)
     #create directories
     if not os.path.exists(output_folder):
@@ -158,9 +161,9 @@ def colmap_to_NSVF(output_folder, image_folder, calibration_folder, imagestxt_pa
     populate_pose(output_folder,val_set,"1_val_")
     populate_pose(output_folder,test_set,"2_test_")
 
-    populate_rgb(output_folder, image_folder, calibration_folder, train_set, "0_train_")
-    populate_rgb(output_folder, image_folder, calibration_folder, val_set, "1_val_")
-    populate_rgb(output_folder, image_folder, calibration_folder, test_set, "2_test_")
+    populate_rgb(output_folder, image_folder, calibration_folder, train_set, "0_train_",use_exif = use_exif)
+    populate_rgb(output_folder, image_folder, calibration_folder, val_set, "1_val_",use_exif = use_exif)
+    populate_rgb(output_folder, image_folder, calibration_folder, test_set, "2_test_",use_exif = use_exif)
 
     create_bbox(output_folder, img_info)
     create_intrinsics(calibration_folder, output_folder)
@@ -168,9 +171,9 @@ def colmap_to_NSVF(output_folder, image_folder, calibration_folder, imagestxt_pa
     return 1
 
 
-imagestxt_path = r"C:\Users\einar\Desktop\colmap_notes\images.txt"
-image_folder = r"C:\Users\einar\Desktop\neodroid_datasets\fruit1"
-calibration_folder = r"C:\Users\einar\Desktop\neodroid_plenoxels\camera_calibration\calibration"
+imagestxt_path = r"C:\Users\einar\Desktop\Lighthouse_colmap\images.txt"
+image_folder = r"C:\Users\einar\Desktop\Lighthouse_colmap\images"
+calibration_folder = r"C:\Users\einar\Desktop\Lighthouse_colmap\selfmade"
 
-output_folder = r"C:\Users\einar\Desktop\fruit_colmap_notes"
-colmap_to_NSVF(output_folder, image_folder, calibration_folder, imagestxt_path)
+output_folder = r"C:\Users\einar\Desktop\lighthouse_NSVF"
+colmap_to_NSVF(output_folder, image_folder, calibration_folder, imagestxt_path, use_exif = False)
