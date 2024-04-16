@@ -1439,7 +1439,7 @@ void distloss_grad(
         .device(rays.origins.device())
         .requires_grad(false);
 
-    int max_steps = 1.73205*grid.links.size[0]/opt.step_size + 2; // steps a perfectly diagonal ray would need
+    int max_steps = ceil(1.73205*grid.links.size(0)/opt.step_size) + 1; // steps a perfectly diagonal ray would need
     
     //Tensors needed to calculate distortion loss
     torch::Tensor weights = torch::empty({rays.origins.size(0), max_steps}, options);
