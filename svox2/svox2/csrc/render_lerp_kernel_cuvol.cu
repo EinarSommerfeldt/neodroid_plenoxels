@@ -1442,15 +1442,15 @@ void distloss_grad(
     int max_steps = ceil(1.73205*grid.links.size(0)/opt.step_size) + 1; // steps a perfectly diagonal ray would need
     
     //Tensors needed to calculate distortion loss
-    torch::Tensor weights = torch::empty({rays.origins.size(0), max_steps}, options);
-    torch::Tensor midpoint_distances = torch::empty({rays.origins.size(0), max_steps}, options);
-    torch::Tensor intervals = torch::empty({rays.origins.size(0), max_steps}, options);
+    torch::Tensor weights = torch::zeros({rays.origins.size(0), max_steps}, options);
+    torch::Tensor midpoint_distances = torch::zeros({rays.origins.size(0), max_steps}, options);
+    torch::Tensor intervals = torch::zeros({rays.origins.size(0), max_steps}, options);
 
-    torch::Tensor wm = torch::empty({rays.origins.size(0), max_steps}, options);
-    torch::Tensor w_prefix = torch::empty({rays.origins.size(0), max_steps}, options);
-    torch::Tensor wm_prefix = torch::empty({rays.origins.size(0), max_steps}, options);
+    torch::Tensor wm = torch::zeros({rays.origins.size(0), max_steps}, options);
+    torch::Tensor w_prefix = torch::zeros({rays.origins.size(0), max_steps}, options);
+    torch::Tensor wm_prefix = torch::zeros({rays.origins.size(0), max_steps}, options);
 
-    torch::Tensor partial_grads = torch::empty({rays.origins.size(0), max_steps}, options);
+    torch::Tensor partial_grads = torch::zeros({rays.origins.size(0), max_steps}, options);
 
     const int blocks = CUDA_N_BLOCKS_NEEDED(Q, DISTLOSS_RAY_CUDA_THREADS);
     device::distloss_kernel<<<blocks, DISTLOSS_RAY_CUDA_THREADS>>>(
