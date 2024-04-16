@@ -796,6 +796,14 @@ __global__ void distloss_kernel(
         PackedSparseGridSpec grid,
         PackedRaysSpec rays,
         RenderOptions opt,
+        float* __restrict__ weights,
+        float* __restrict__ midpoint_distances,
+        float* __restrict__ intervals,
+        float* __restrict__ wm,
+        float* __restrict__ w_prefix,
+        float* __restrict__ wm_prefix,
+        float* __restrict__ partial_grads,
+        int max_steps,
         float scaling,
         bool sparsity,
         PackedGridOutputGrads grads) {
@@ -809,84 +817,59 @@ __global__ void distloss_kernel(
             rays.dirs[ray_id].data());
 
     __shared__ float ray_length[DISTLOSS_RAY_CUDA_THREADS];
-    __shared__ int max_steps[DISTLOSS_RAY_CUDA_THREADS];
     __shared__ int total_steps[DISTLOSS_RAY_CUDA_THREADS];
+    __shared__ float w_total[DISTLOSS_RAY_CUDA_THREADS];
+    __shared__ float wm_total[DISTLOSS_RAY_CUDA_THREADS];
 
     ray_find_bounds(ray_spec[ray_blk_id], grid, opt, ray_id); // sets ray_spec tmin and tmax
     ray_length[ray_blk_id] = ray_spec[ray_blk_id].tmax - ray_spec[ray_blk_id].tmin;
     if (ray_length[ray_blk_id] < 0) return;
-
-    max_steps[ray_blk_id] = ceil(ray_length[ray_blk_id]/opt.step_size)+1;
-
-    float* weights = new float[max_steps[ray_blk_id]]{0};
-    float* midpoint_distances = new float[max_steps[ray_blk_id]]{0};
-    float* intervals = new float[max_steps[ray_blk_id]]{0};
 
     total_steps[ray_blk_id] = trace_ray_distloss( 
         grid,
         ray_spec[ray_blk_id],
         opt,
         ray_length[ray_blk_id],
-        weights,
-        midpoint_distances,
-        intervals);
-
-    // Forward pass 
-    float* wm = new float[total_steps[ray_blk_id]]{0};
-
-    float* w_prefix = new float[total_steps[ray_blk_id]]{0};  // w_cumsum rightshifted 1
-    float* wm_prefix = new float[total_steps[ray_blk_id]]{0}; // wm_cumsum rightshifted 1
-
-    __shared__ float w_total[DISTLOSS_RAY_CUDA_THREADS];
-    __shared__ float wm_total[DISTLOSS_RAY_CUDA_THREADS];
+        &weights[ray_id * max_steps],                // NCHW: data_pos = n * CHW + c * HW + h * W + w
+        &midpoint_distances[ray_id * max_steps],
+        &intervals[ray_id * max_steps]);
 
     // Fill arrays
     distloss_forward_pass(
-        weights, 
-        midpoint_distances,
-        wm,
-        w_prefix,
-        wm_prefix,
+        &weights[ray_id * max_steps], 
+        &midpoint_distances[ray_id * max_steps],
+        &wm[ray_id * max_steps],
+        &w_prefix[ray_id * max_steps],
+        &wm_prefix[ray_id * max_steps],
         w_total[ray_blk_id],
         wm_total[ray_blk_id],
         total_steps[ray_blk_id]);
     
-    // Fill grad_arr with gradients for each sample point
-    float* grad_arr = new float[total_steps[ray_blk_id]]{0};
     distloss_backward_pass(
-        weights, 
-        midpoint_distances,
-        intervals,
-        wm,
-        w_prefix,
-        wm_prefix,
+        &weights[ray_id * max_steps], 
+        &midpoint_distances[ray_id * max_steps],
+        &intervals[ray_id * max_steps],
+        &wm[ray_id * max_steps],
+        &w_prefix[ray_id * max_steps],
+        &wm_prefix[ray_id * max_steps],
         w_total[ray_blk_id],
         wm_total[ray_blk_id],
         total_steps[ray_blk_id],
         scaling,
         sparsity,
         //output
-        grad_arr);
+        &partial_grads[ray_id * max_steps]);
 
     // Apply gradients from each sample point to gradient voxels
     trace_ray_backward_distloss(
         grid,
-        grad_arr,
+        &partial_grads[ray_id * max_steps],
         ray_spec[ray_blk_id],
         opt,
-        weights,
+        &weights[ray_id * max_steps],
+        //output
         grads
     );
-
-    delete[] weights;
-    delete[] midpoint_distances;
-    delete[] intervals;
-
-    delete[] wm;
-    delete[] w_prefix;
-    delete[] wm_prefix;
-
-    delete[] grad_arr;
 }
 
 __launch_bounds__(TRACE_RAY_CUDA_THREADS, MIN_BLOCKS_PER_SM)
@@ -1449,11 +1432,39 @@ void distloss_grad(
     grads.check();
     const auto Q = rays.origins.size(0);
     
+    auto options =
+        torch::TensorOptions()
+        .dtype(rays.origins.dtype())
+        .layout(torch::kStrided)
+        .device(rays.origins.device())
+        .requires_grad(false);
+
+    int max_steps = ceil(1.73205*grid.links.shape[0]/opt.step_size)+1 // steps a perfectly diagonal ray would need
+    
+    //Tensors needed to calculate distortion loss
+    torch::Tensor weights = torch::empty({rays.origins.size(0), max_steps}, options);
+    torch::Tensor midpoint_distances = torch::empty({rays.origins.size(0), max_steps}, options);
+    torch::Tensor intervals = torch::empty({rays.origins.size(0), max_steps}, options);
+
+    torch::Tensor wm = torch::empty({rays.origins.size(0), max_steps}, options);
+    torch::Tensor w_prefix = torch::empty({rays.origins.size(0), max_steps}, options);
+    torch::Tensor wm_prefix = torch::empty({rays.origins.size(0), max_steps}, options);
+
+    torch::Tensor partial_grads = torch::empty({rays.origins.size(0), max_steps}, options);
+
     const int blocks = CUDA_N_BLOCKS_NEEDED(Q, DISTLOSS_RAY_CUDA_THREADS);
     device::distloss_kernel<<<blocks, DISTLOSS_RAY_CUDA_THREADS>>>(
             grid,
             rays,
             opt,
+            weights.data_ptr<float>(),
+            midpoint_distances.data_ptr<float>(),
+            intervals.data_ptr<float>(),
+            wm.data_ptr<float>(),
+            w_prefix.data_ptr<float>(),
+            wm_prefix.data_ptr<float>(),
+            partial_grads.data_ptr<float>(),
+            max_steps,
             scaling,
             sparsity,
             //Output
