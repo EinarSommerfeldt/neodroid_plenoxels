@@ -173,6 +173,7 @@ opt/opt.py
 opt/opt_neodroid.py
 opt/render_imgs.py
 opt/render_imgs_circle.py
+opt/render_roi.py
 opt/to_svox1.py
 opt/co3d_tmp/co3d.txt
 opt/configs/co3d.json
@@ -183,6 +184,7 @@ opt/configs/llff_hitv.json
 opt/configs/syn.json
 opt/configs/syn_nv.json
 opt/configs/tnt.json
+opt/configs/neodroid/filterdataset.json
 opt/configs/neodroid/neodroid.json
 opt/configs/neodroid/neodroid_weightdecay.json
 opt/configs/neodroid/tnt_smaller.json
@@ -204,18 +206,19 @@ opt/tasks/interpablate.json
 opt/tasks/ntrainablate.json
 opt/tasks/sanity.json
 opt/tasks/tvearlyonly.json
+opt/tasks/neodroid/distloss_tuning.json
 opt/util/__init__.py
 opt/util/co3d_dataset.py
 opt/util/config_util.py
 opt/util/dataset.py
 opt/util/dataset_base.py
+opt/util/filter_dataset.py
 opt/util/llff_dataset.py
 opt/util/load_llff.py
 opt/util/nerf_dataset.py
 opt/util/nsvf_dataset.py
 opt/util/util.py
 svox2/__init__.py
-svox2/csrc.cpython-310-x86_64-linux-gnu.so
 svox2/defs.py
 svox2/svox2.py
 svox2/utils.py
