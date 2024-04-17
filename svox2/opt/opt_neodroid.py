@@ -234,9 +234,11 @@ group.add_argument('--lambda_tv_basis', type=float, default=0.0,
                    help='Learned basis total variation loss')
 # End Basis TV
 
-# Distortion loss
+# ----------------------------------- Distortion loss -----------------------------
 group.add_argument('--distloss', type=float, default=0.0)
 group.add_argument('--distloss_nosparsity', action='store_true', default=False)
+group.add_argument('--distloss_until', type=int, default=-1,
+                   help = "apply distloss until this batch number")
 
 group.add_argument('--weight_decay_sigma', type=float, default=1.0)
 group.add_argument('--weight_decay_sh', type=float, default=1.0)
@@ -558,7 +560,7 @@ while True:
             #          sparsity_file.write(f"{gstep_id} {nz}\n")
 
             # Apply distloss regularizer
-            if args.distloss > 0:
+            if args.distloss > 0 and (args.distloss_until == -1 or gstep_id < args.distloss_until):
                 grid.inplace_distloss_grad(rays, scaling = args.distloss, sparsity = not args.distloss_nosparsity)
 
             # Apply TV/Sparsity regularizers
