@@ -88,8 +88,10 @@ __device__ __inline__ int trace_ray_distloss(
 
         t += opt.step_size;
     }
-
-    return i;
+    weights[i] = 0; // Don't use last sampled point
+    intervals[i] = 0;
+    midpoint_distances[i] = 0;
+    return i - 1;
 }
 
 
