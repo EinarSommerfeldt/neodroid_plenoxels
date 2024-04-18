@@ -82,7 +82,7 @@ __device__ __inline__ int trace_ray_distloss(
 
             weights[i] = weight;
             intervals[i] = opt.step_size/ray_length;
-            midpoint_distances[i] = (t + opt.step_size - ray.tmin)/ray_length;
+            midpoint_distances[i] = (t + opt.step_size/2 - ray.tmin)/ray_length;
             i++;
         }
 
