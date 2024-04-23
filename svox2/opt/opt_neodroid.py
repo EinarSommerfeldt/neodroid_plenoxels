@@ -602,6 +602,11 @@ while True:
             #  print('nz density', torch.count_nonzero(grid.sparse_grad_indexer).item(),
             #        ' sh', torch.count_nonzero(grid.sparse_sh_grad_indexer).item())
 
+            #Apply bbox mask
+            Pmin_init = np.array([0.2, 0.2, 0.2])
+            Pmax_init = np.array([0.8, 0.8, 0.8])
+            grid.apply_expanding_bbox(Pmin_init, Pmax_init, gstep_id, 1000)
+
             # Manual SGD/rmsprop step
             if gstep_id >= args.lr_fg_begin_step: #USED
                 grid.optim_density_step(lr_sigma, beta=args.rms_beta, optim=args.sigma_optim) #RMSPROP

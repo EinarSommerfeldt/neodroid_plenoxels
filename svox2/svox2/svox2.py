@@ -1142,79 +1142,31 @@ class SparseGrid(nn.Module):
         self.sparse_sh_grad_indexer = self.sparse_grad_indexer.clone()
         return rgb_out
 
-    def volume_render_fused_custom(
-        self,
-        rays: Rays,
-        rgb_gt: torch.Tensor,
-        randomize: bool = False,
-        beta_loss: float = 0.0,
-        sparsity_loss: float = 0.0
-    ):
+    # custom
+    def apply_expanding_bbox(self, Pmin_init: np.ndarray, Pmax_init: np.ndarray, curr_it: int, max_it: int):
         """
-        Standard volume rendering with fused MSE gradient generation,
-            given a ground truth color for each pixel.
-        Will update the *.grad tensors for each parameter
-        You can then subtract the grad manually or use the optim_*_step methods
+        Sets gradients outside expanidng bbox to zero.
+        BBox expands from Pmin_init, Pmax_init to full size.
 
-        See grid.opt.* (RenderOptions) for configs.
-
-        :param rays: Rays, (origins (N, 3), dirs (N, 3))
-        :param rgb_gt: (N, 3), GT pixel colors, each channel in [0, 1]
-        :param randomize: bool, whether to enable randomness
-        :param beta_loss: float, weighting for beta loss to add to the gradient.
-                                 (fused into the backward pass).
-                                 This is average voer the rays in the batch.
-                                 Beta loss also from neural volumes:
-                                 [Lombardi et al., ToG 2019]
-        :return: (N, 3), predicted RGB
+        :param Pmin_init: (1,3) initial min value of bbox for each axis from 0.0 to 1.0
+        :param Pmax_init: (1,3) initial max value of bbox for each axis from 0.0 to 1.0
+        :param curr_it: int, current training iteration
+        :param max_it: int, iteration the bounding is finished expanding
         """
-        assert (
-            _C is not None and self.sh_data.is_cuda
-        ), "CUDA extension is currently required for fused"
-        assert rays.is_cuda
-        grad_density, grad_sh, grad_basis, grad_bg = self._get_data_grads()
-        rgb_out = torch.zeros_like(rgb_gt) #(N, 3)
-        basis_data : Optional[torch.Tensor] = None
-        if self.basis_type == BASIS_TYPE_MLP: #false?
-            with torch.enable_grad():
-                basis_data = self._eval_basis_mlp(rays.dirs)
-            grad_basis = torch.empty_like(basis_data)
+        if curr_it > max_it:
+            return
+        N = self.density_data.size().numpy()
 
-        self.sparse_grad_indexer = torch.zeros((self.density_data.size(0),),
-                dtype=torch.bool, device=self.density_data.device)
+        r = curr_it/float(max_it)
+        Pmin = (Pmin_init * (1 - r)) * N
+        Pmax = (Pmax_init * (1 - r) + r) * N
 
-        grad_holder = _C.GridOutputGrads()
-        grad_holder.grad_density_out = grad_density
-        grad_holder.grad_sh_out = grad_sh
-        if self.basis_type != BASIS_TYPE_SH:
-            grad_holder.grad_basis_out = grad_basis
-        grad_holder.mask_out = self.sparse_grad_indexer
-        if self.use_background:
-            grad_holder.grad_background_out = grad_bg
-            self.sparse_background_indexer = torch.zeros(list(self.background_data.shape[:-1]),
-                    dtype=torch.bool, device=self.background_data.device)
-            grad_holder.mask_background_out = self.sparse_background_indexer
+        print(Pmin)
+        print(Pmax)
 
-        cu_fn = _C.__dict__[f"volume_render_cuvol_fused_distloss"] # volume_render_cuvol_fused (render_lerp_kernel_cuvol.cu 1079)
+        return
 
-        #  with utils.Timing("actual_render"):
-        cu_fn(
-            self._to_cpp(replace_basis_data=basis_data),
-            rays._to_cpp(),
-            self.opt._to_cpp(randomize=randomize),
-            rgb_gt,
-            beta_loss,
-            sparsity_loss,
-            rgb_out, #(N, 3)
-            grad_holder
-        )
-        if self.basis_type == BASIS_TYPE_MLP:
-            # Manually trigger MLP backward!
-            basis_data.backward(grad_basis)
-
-        self.sparse_sh_grad_indexer = self.sparse_grad_indexer.clone()
-        return rgb_out
-
+    # custom
     def inplace_distloss_grad(
             self, rays: Rays, scaling: float = 1.0, sparsity = True):
         
