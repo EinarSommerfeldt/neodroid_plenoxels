@@ -240,6 +240,11 @@ group.add_argument('--distloss_nosparsity', action='store_true', default=False)
 group.add_argument('--distloss_until', type=int, default=-1,
                    help = "apply distloss until this batch number")
 
+# ----------------------------------- Expanding bbox ------------------------------
+group.add_argument('--expanding_bbox_maxiter', type=int, default=0)
+group.add_argument('--expanding_bbox_initvalue', type=float, default=0.2, 
+                   help="What fraction of the bbox will start removed from each side")
+
 group.add_argument('--weight_decay_sigma', type=float, default=1.0)
 group.add_argument('--weight_decay_sh', type=float, default=1.0)
 
@@ -602,10 +607,11 @@ while True:
             #  print('nz density', torch.count_nonzero(grid.sparse_grad_indexer).item(),
             #        ' sh', torch.count_nonzero(grid.sparse_sh_grad_indexer).item())
 
-            #Apply bbox mask
-            Pmin_init = np.array([0.2, 0.2, 0.2])
-            Pmax_init = np.array([0.8, 0.8, 0.8])
-            grid.apply_expanding_bbox(Pmin_init, Pmax_init, gstep_id, 1000)
+            #Apply expanding bbox mask
+            if gstep_id < args.expanding_bbox_maxiter:
+                Pmin_init = np.array([args.expanding_bbox_initvalue for x in range(3)]) #could be moved outside loop
+                Pmax_init = np.array([1 - args.expanding_bbox_initvalue for x in range(3)])
+                grid.apply_expanding_bbox(Pmin_init, Pmax_init, gstep_id, args.expanding_bbox_maxiter)
 
             # Manual SGD/rmsprop step
             if gstep_id >= args.lr_fg_begin_step: #USED
