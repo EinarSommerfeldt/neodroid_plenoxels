@@ -1155,7 +1155,7 @@ class SparseGrid(nn.Module):
         """
         if curr_it > max_it:
             return
-        N = self.density_data.size().numpy()
+        N = np.array([x for x in self.density_data.size()])
 
         r = curr_it/float(max_it)
         Pmin = (Pmin_init * (1 - r)) * N
