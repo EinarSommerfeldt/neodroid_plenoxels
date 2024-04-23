@@ -1160,14 +1160,24 @@ class SparseGrid(nn.Module):
         r = curr_it/float(max_it)
         Pmin = (Pmin_init * (1 - r)) * N
         Pmax = (Pmax_init * (1 - r) + r) * N
-        
-        self.density_data.grad[np.arange(-(N[0]-Pmax[0]),Pmin[0]),:,:] = 0
-        self.density_data.grad[:,np.arange(-(N[1]-Pmax[1]),Pmin[1]),:] = 0
-        self.density_data.grad[:,:,np.arange(-(N[2]-Pmax[2]),Pmin[2])] = 0
 
-        self.sh_data.grad [np.arange(-(N[0]-Pmax[0]),Pmin[0]),:,:] = 0
-        self.sh_data.grad [:,np.arange(-(N[1]-Pmax[1]),Pmin[1]),:] = 0
-        self.sh_data.grad [:,:,np.arange(-(N[2]-Pmax[2]),Pmin[2])] = 0
+        #All indices outside bbox where links > 0
+        axis0_indices = self.links[np.arange(-(N[0]-Pmax[0]),Pmin[0]),:,:][self.links[np.arange(-(N[0]-Pmax[0]),Pmin[0]),:,:] > -1]
+        axis1_indices = self.links[:,np.arange(-(N[1]-Pmax[1]),Pmin[1]),:][self.links[:,np.arange(-(N[1]-Pmax[1]),Pmin[1]),:] > -1]
+        axis2_indices = self.links[:,:,np.arange(-(N[2]-Pmax[2]),Pmin[2])][self.links[:,:,np.arange(-(N[2]-Pmax[2]),Pmin[2])] > -1]
+
+        self.sparse_grad_indexer[axis0_indices] = 0
+        self.sparse_grad_indexer[axis1_indices] = 0
+        self.sparse_grad_indexer[axis2_indices] = 0
+
+        self.density_data.grad[axis0_indices] = 0
+        self.density_data.grad[axis1_indices] = 0
+        self.density_data.grad[axis2_indices] = 0
+
+        self.sh_data.grad[axis0_indices] = 0
+        self.sh_data.grad[axis1_indices] = 0
+        self.sh_data.grad[axis2_indices] = 0
+
         return
 
     # custom
