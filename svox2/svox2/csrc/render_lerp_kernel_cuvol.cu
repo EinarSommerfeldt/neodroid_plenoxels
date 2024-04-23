@@ -145,7 +145,7 @@ __device__ __inline__ void trace_ray_backward_distloss(
             trilerp_backward_cuvol_one_density(     
                     grid.links,                     // links
                     grads.grad_density_out,         // grad_data_out
-                    grads.mask_out,                 // mask_out
+                    grads.mask_out,                 // self.sparse_grad_indexer
                     grid.stride_x,                  // offx
                     grid.size[2],                   // offy
                     ray.l, ray.pos, curr_grad_sigma);   // l, pos, grad_out
@@ -488,7 +488,7 @@ __device__ __inline__ void trace_ray_cuvol_backward(
                 trilerp_backward_cuvol_one_density( //update grads of all contributing voxels (density).
                         grid.links,
                         grads.grad_density_out,
-                        grads.mask_out,
+                        grads.mask_out,             // self.sparse_grad_indexer
                         grid.stride_x,
                         grid.size[2],
                         ray.l, ray.pos, curr_grad_sigma);
