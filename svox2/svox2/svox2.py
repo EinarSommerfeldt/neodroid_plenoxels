@@ -1155,15 +1155,23 @@ class SparseGrid(nn.Module):
         """
         if curr_it > max_it:
             return
-        N = np.array([x for x in self.links.size()])
+        N = np.array([x - 1 for x in self.links.size()])
 
         r = curr_it/float(max_it)
         Pmin = (Pmin_init * (1 - r)) * N
         Pmax = (Pmax_init * (1 - r) + r) * N
 
-        print(Pmin)
-        print(Pmax)
+        self.sparse_grad_indexer[np.arange(-(N[0]-Pmax[0]),Pmin[0]),:,:] = 0
+        self.sparse_grad_indexer[:,np.arange(-(N[1]-Pmax[1]),Pmin[1]),:] = 0
+        self.sparse_grad_indexer[:,:,np.arange(-(N[2]-Pmax[2]),Pmin[2])] = 0
+        
+        self.density_data.grad[np.arange(-(N[0]-Pmax[0]),Pmin[0]),:,:] = 0
+        self.density_data.grad[:,np.arange(-(N[1]-Pmax[1]),Pmin[1]),:] = 0
+        self.density_data.grad[:,:,np.arange(-(N[2]-Pmax[2]),Pmin[2])] = 0
 
+        self.sh_data.grad [np.arange(-(N[0]-Pmax[0]),Pmin[0]),:,:] = 0
+        self.sh_data.grad [:,np.arange(-(N[1]-Pmax[1]),Pmin[1]),:] = 0
+        self.sh_data.grad [:,:,np.arange(-(N[2]-Pmax[2]),Pmin[2])] = 0
         return
 
     # custom
