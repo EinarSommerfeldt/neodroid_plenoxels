@@ -1,12 +1,12 @@
 #!/bin/sh
 #SBATCH --partition=GPUQ
 #SBATCH --account=ie-idi 
-#SBATCH --time=02:00:00
+#SBATCH --time=00:30:00
 #SBATCH --nodes=1 
 #SBATCH --ntasks-per-node=1
 #SBATCH --mem=8G
 #SBATCH --gres=gpu:1
-#SBATCH --job-name=plenoxels
+#SBATCH --job-name=plenoxels_tasks
 #SBATCH --output=/cluster/home/einarjso/neodroid_plenoxels/output/training/JOB%j.out
 echo "we are running from this directory: $SLURM_SUBMIT_DIR"
 echo "the name of the job is: $SLURM_JOB_NAME"
@@ -24,4 +24,4 @@ module purge
 module load PyTorch/1.12.1-foss-2022a-CUDA-11.7.0
 
 cd /cluster/home/einarjso/neodroid_plenoxels/svox2/opt
-python autotune_neodroid.py -g '0' tasks/neodroid/distloss_tuning.json
+python autotune_neodroid.py -g '0' tasks/neodroid/niters_tuning.json

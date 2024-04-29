@@ -25,4 +25,4 @@ module load PyTorch/1.12.1-foss-2022a-CUDA-11.7.0
 
 cd /cluster/home/einarjso/neodroid_plenoxels/svox2/opt
 ##--elevation -15.0 --traj_type circle --vert_shift -0.3
-python render_imgs_circle.py /cluster/home/einarjso/neodroid_plenoxels/svox2/opt/ckpt/nearclip_tuning_15_04/near_clip_50 /cluster/home/einarjso/local_datasets/fruit_roi_scale4_backup
+python render_imgs_circle.py /cluster/home/einarjso/neodroid_plenoxels/svox2/opt/ckpt/exp_bbox_it256_init0p2_24_04 /cluster/home/einarjso/local_datasets/fruit_roi_scale4_backup

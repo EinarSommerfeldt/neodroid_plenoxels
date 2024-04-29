@@ -1,0 +1,20 @@
+{
+    "eval": true,
+    "data_root": "/cluster/home/einarjso/local_datasets",
+    "train_root": "/cluster/home/einarjso/neodroid_plenoxels/svox2/opt/ckpt/niters_tuning_17_04",
+    "variables": {
+        "n_iters": [1500, 3000, 7500, 15000, 30000]
+    },
+    "tasks": [{
+        "train_dir": "niters_{n_iters}_distloss_0p01",
+        "data_dir": "fruit_roi_scale4_backup",
+        "flags": [
+            "--n_iters", "{n_iters}"
+        ],
+        "common_flags": [
+            "--config", "/cluster/home/einarjso/neodroid_plenoxels/svox2/opt/configs/neodroid/neodroid_weightdecay_noiters.json",
+            "--distloss_nosparsity",
+            "--distloss", "0.01"
+        ]
+    }]
+}

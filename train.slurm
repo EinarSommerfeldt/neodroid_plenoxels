@@ -1,12 +1,12 @@
 #!/bin/sh
 #SBATCH --partition=GPUQ
 #SBATCH --account=ie-idi 
-#SBATCH --time=00:30:00
+#SBATCH --time=00:15:00
 #SBATCH --nodes=1 
 #SBATCH --ntasks-per-node=1
 #SBATCH --mem=8G
 #SBATCH --gres=gpu:1
-#SBATCH --job-name=plenoxels_lh_dist
+#SBATCH --job-name=plenoxels_train
 #SBATCH --output=/cluster/home/einarjso/neodroid_plenoxels/output/training/JOB%j.out
 echo "we are running from this directory: $SLURM_SUBMIT_DIR"
 echo "the name of the job is: $SLURM_JOB_NAME"
@@ -25,5 +25,5 @@ module load PyTorch/1.12.1-foss-2022a-CUDA-11.7.0
 
 
 cd /cluster/home/einarjso/neodroid_plenoxels/svox2/opt
-./launch_neodroid.sh lighthouse_distloss_15_04 0 /cluster/home/einarjso/local_datasets/lighthouse_NSVF -c /cluster/home/einarjso/neodroid_plenoxels/svox2/opt/configs/neodroid/neodroid_weightdecay.json --distloss 0.001
-tail -f ckpt/lighthouse_distloss_15_04/log
+./launch_neodroid.sh exp_bbox_it256_init0p2_24_04 0 /cluster/home/einarjso/local_datasets/fruit_roi_scale4_backup -c /cluster/home/einarjso/neodroid_plenoxels/svox2/opt/configs/neodroid/neodroid_weightdecay.json --expanding_bbox_maxiter 256 --expanding_bbox_initvalue 0.2
+tail -f ckpt/exp_bbox_it256_init0p2_24_04/log
