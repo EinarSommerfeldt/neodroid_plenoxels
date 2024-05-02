@@ -1,6 +1,25 @@
 import ot
 import numpy as np
 
+def flexible_wasserstein(values_gt: np.ndarray, pos_gt: np.ndarray, values_rec: np.ndarray, pos_rec: np.ndarray):
+    """
+    values_gt: np.ndarray, shape (n1,1) 
+    pos_gt: np.ndarray, shape (n1,3)
+    values_rec: np.ndarray, shape (n2,1)
+    pos_rec: np.ndarray, shape (n2,3)
+
+    returns: approximated wasserstein distance between the two distributions
+    """
+
+    values_gt = values_gt/np.sum(values_gt)
+    values_rec = values_rec/np.sum(values_rec)
+
+    M = ot.dist(pos_gt, pos_rec, metric='sqeuclidean')
+    reg = 1e-2 #Approaches wasserstein distance as this approaches 0.
+    Wd_reg = ot.sinkhorn2(values_gt, values_rec, M, reg) # entropic regularized OT
+
+    return Wd_reg
+
 def compute_wasserstein(grid_gt: np.ndarray, step_gt: float, grid_rec: np.ndarray, step_rec: float):
     """
     Computes an approximation of the wasserstein distance between grid_gt and grid_rec using the sinkhorn algorithm.
