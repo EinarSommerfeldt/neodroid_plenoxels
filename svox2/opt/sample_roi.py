@@ -86,7 +86,7 @@ def sample_roi(grid: svox2.SparseGrid, roi: Cuboid, grid_radius: np.ndarray, gri
             j += 1
         i += 1
 
-    return np.array(values), np.array(positions).reshape((...,3))
+    return np.array(values), np.array(positions).reshape((-1,3))
 
 cuboid = cuboid_bananaspot
 cuboid.transform = dset.similarity_transform
