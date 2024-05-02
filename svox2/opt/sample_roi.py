@@ -4,6 +4,8 @@
 
 import sys
 
+from torch import Tensor
+
 sys.path.append("/cluster/home/einarjso/neodroid_plenoxels/python_scripts")
 from roi.cuboid import Cuboid, cuboid_bananaspot
 
@@ -46,7 +48,7 @@ config_util.setup_render_opts(grid.opt, args)
 
 
 # assumes cubic grid
-def sample_roi(grid: svox2.SparseGrid, roi: Cuboid, grid_radius: np.ndarray, grid_reso: np.ndarray):
+def sample_roi(density_data: Tensor, links: Tensor, roi: Cuboid, grid_radius: np.ndarray, grid_reso: np.ndarray):
     verts = roi.to_vertices()
 
     x_min = np.min(verts[0,:])
@@ -69,7 +71,7 @@ def sample_roi(grid: svox2.SparseGrid, roi: Cuboid, grid_radius: np.ndarray, gri
     print(f"i_min: {i_min}, i_max: {i_max}, j_min: {j_min}, j_max: {j_max}, k_min: {k_min}, k_max: {k_max},")
     values = []
     positions = []
-    links_cpu = grid.links.cpu()
+    links_cpu = links.cpu()
 
     i = i_min
     while i < i_max:
@@ -77,8 +79,8 @@ def sample_roi(grid: svox2.SparseGrid, roi: Cuboid, grid_radius: np.ndarray, gri
         while j < j_max:
             k = k_min
             while k < k_max:
-                if links_cpu[i,j,k] > -1:
-                    val = grid.density_data.data[links_cpu[i,j,k]]
+                if links_cpu[i,j,k] > -1: #is it ok to copy the grid???
+                    val = density_data[links_cpu[i,j,k]]
                     values.append(val.cpu().numpy())
 
                     pos = np.array([world_coords[i], world_coords[j], world_coords[k]])
@@ -94,7 +96,7 @@ cuboid = cuboid_bananaspot
 cuboid.transform = dset.similarity_transform
 cuboid.scale =  dset.scene_scale
 
-v, p = sample_roi(grid, cuboid, grid.radius, grid.links.shape)
+v, p = sample_roi(grid.density_data.data, grid.links, cuboid, grid.radius, grid.links.shape)
 
 print(v.shape)
 print(p.shape)
