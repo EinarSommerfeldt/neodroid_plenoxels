@@ -77,7 +77,7 @@ def sample_roi(grid: svox2.SparseGrid, roi: Cuboid, grid_radius: np.ndarray, gri
             while k < k_max:
                 if links_cpu[i,j,k] > -1:
                     val = grid.density_data.data[links_cpu[i,j,k]]
-                    values.append(val.cpu().float())
+                    values.append(val.cpu().numpy())
 
                     pos = np.array([world_coords[i], world_coords[j], world_coords[k]])
                     positions.append(pos)
