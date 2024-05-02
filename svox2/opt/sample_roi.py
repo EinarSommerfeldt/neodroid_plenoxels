@@ -96,5 +96,7 @@ cuboid.scale =  dset.scene_scale
 
 v, p = sample_roi(grid, cuboid, grid.radius, grid.links.shape)
 
-for elem in v:
-    print(elem.astype(np.float64))
+print(v.shape)
+print(p.shape)
+
+print(v[0])
