@@ -81,7 +81,7 @@ def sample_roi(grid: svox2.SparseGrid, roi: Cuboid, grid_radius: np.ndarray, gri
 
                     pos = np.array([world_coords[i], world_coords[j], world_coords[k]])
                     positions.append(pos)
-
+                print(f"{i},{j},{k}")
                 k += 1
             j += 1
         i += 1
