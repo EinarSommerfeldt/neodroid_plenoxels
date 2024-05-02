@@ -225,8 +225,8 @@ cuboid.scale =  dset.scene_scale
 grid.opt.background_brightness = 0.0
 grid.background_data.data[..., -1] = 0.0
 
-factor = grid.radius[0]/float(reso[0]/2) #Assuming cube bbox and reso
-world_coords = factor*(np.arange(0, reso[0], 1.0) - reso[0]/float(2))
+factor = grid.radius[0]/float(reso[0]/2) # 1.0/128
+world_coords = factor*(np.arange(0, reso[0], 1.0) - reso[0]/float(2)) # 1/128 * [-128, -127,...,0,..., 127]
 
 def mask(a,x,y,z):
     if a < 0:
