@@ -76,17 +76,18 @@ def sample_roi(grid: svox2.SparseGrid, roi: Cuboid, grid_radius: np.ndarray, gri
     while i < i_max:
         while j < j_max:
             while k < k_max:
-                val = grid.density_data.data[links_cpu[i,j,k]]
-                values.append(val.cpu())
+                if links_cpu[i,j,k] > -1:
+                    val = grid.density_data.data[links_cpu[i,j,k]]
+                    values.append(val.cpu())
 
-                pos = np.array([world_coords[i], world_coords[j], world_coords[k]])
-                positions.append([pos])
+                    pos = np.array([world_coords[i], world_coords[j], world_coords[k]])
+                    positions.append(pos)
 
                 k += 1
             j += 1
         i += 1
 
-    return np.array(values), np.array(positions)
+    return np.array(values), np.array(positions).reshape((...,3))
 
 cuboid = cuboid_bananaspot
 cuboid.transform = dset.similarity_transform
@@ -97,3 +98,5 @@ v, p = sample_roi(grid, cuboid, grid.radius, grid.links.shape)
 
 print(v.size)
 print(p.size)
+
+print(v)
