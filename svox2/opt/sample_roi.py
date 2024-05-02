@@ -3,26 +3,19 @@
 # Render 360 circle path
 
 import sys
-from turtle import position
 
 sys.path.append("/cluster/home/einarjso/neodroid_plenoxels/python_scripts")
 from roi.cuboid import Cuboid, cuboid_bananaspot
 
-import torch
 import svox2
 import svox2.utils
-import math
 import argparse
 import numpy as np
-import os
 from os import path
 from util.dataset import datasets
 from util.util import Timing, compute_ssim, viridis_cmap, pose_spherical
 from util import config_util
 
-import imageio
-import cv2
-from tqdm import tqdm
 
 
 
