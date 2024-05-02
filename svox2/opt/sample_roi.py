@@ -100,4 +100,5 @@ cuboid.scale =  dset.scene_scale
 v, p = sample_roi(grid, cuboid, grid.radius, grid.links.shape)
 
 
-
+print(v.size)
+print(p.size)
