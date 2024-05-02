@@ -48,7 +48,6 @@ config_util.setup_render_opts(grid.opt, args)
 # assumes cubic grid
 def sample_roi(grid: svox2.SparseGrid, roi: Cuboid, grid_radius: np.ndarray, grid_reso: np.ndarray):
     verts = roi.to_vertices()
-    print(verts)
 
     x_min = np.min(verts[0,:])
     x_max = np.max(verts[0,:])
