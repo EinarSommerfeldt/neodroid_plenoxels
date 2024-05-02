@@ -83,7 +83,7 @@ def sample_roi(grid: svox2.SparseGrid, roi: Cuboid, grid_radius: np.ndarray, gri
 
                     pos = np.array([world_coords[i], world_coords[j], world_coords[k]])
                     positions.append(pos)
-                    
+
                 k += 1
             j += 1
         i += 1
@@ -97,7 +97,5 @@ cuboid.scale =  dset.scene_scale
 v, p = sample_roi(grid, cuboid, grid.radius, grid.links.shape)
 
 
-print(v.size)
-print(p.size)
-
-print(v)
+print(v.shape)
+print(p.shape)
