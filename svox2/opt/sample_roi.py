@@ -46,7 +46,6 @@ print(grid.center, grid.radius)
 config_util.setup_render_opts(grid.opt, args)
 
 
-
 # assumes cubic grid
 def sample_roi(density_data: Tensor, links: Tensor, roi: Cuboid, grid_radius: np.ndarray, grid_reso: np.ndarray):
     verts = roi.to_vertices()
@@ -79,12 +78,13 @@ def sample_roi(density_data: Tensor, links: Tensor, roi: Cuboid, grid_radius: np
         while j < j_max:
             k = k_min
             while k < k_max:
-                if links_cpu[i,j,k] > -1: #is it ok to copy the grid???
+                if links_cpu[i,j,k] > -1: 
                     val = density_data[links_cpu[i,j,k]]
-                    values.append(val.cpu().numpy())
+                    if val > 0:
+                        values.append(val.cpu().numpy())
 
-                    pos = np.array([world_coords[i], world_coords[j], world_coords[k]])
-                    positions.append(pos)
+                        pos = np.array([world_coords[i], world_coords[j], world_coords[k]])
+                        positions.append(pos)
 
                 k += 1
             j += 1
