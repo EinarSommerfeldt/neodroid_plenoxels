@@ -34,6 +34,8 @@ device = 'cuda:0'
 dset = datasets[args.dataset_type](args.data_dir, split="test",
                                     **config_util.build_data_options(args))
 
+v_path = path.join(args.ckpt, 'values')
+p_path = path.join(args.ckpt, 'positions')
 
 if not path.isfile(args.ckpt):
     args.ckpt = path.join(args.ckpt, 'ckpt.npz')
@@ -98,8 +100,6 @@ cuboid.scale =  dset.scene_scale
 
 v, p = sample_roi(grid.density_data.data, grid.links, cuboid, grid.radius, grid.links.shape)
 
-v_path = path.join(args.ckpt, 'values')
-p_path = path.join(args.ckpt, 'positions')
 
 np.save(v_path, v)
 np.save(p_path, p)
