@@ -98,7 +98,8 @@ cuboid.scale =  dset.scene_scale
 
 v, p = sample_roi(grid.density_data.data, grid.links, cuboid, grid.radius, grid.links.shape)
 
-print(v.shape)
-print(p.shape)
+v_path = path.join(args.ckpt, 'values')
+p_path = path.join(args.ckpt, 'positions')
 
-print(v[0])
+np.save(v_path, v)
+np.save(p_path, p)
