@@ -66,7 +66,9 @@ class FilterDataset(DatasetBase):
             #---------------CUSTOM START-----------------------------
             if self.alpha: #Remove all pixels with alpha == 0
                 mask = self.mask.reshape(-1) #[train_size, h, w] -> [train_size*h*w]
+                print(f"shape before filtering: {origins.shape}")
                 origins = origins[mask]
+                print(f"shape after filtering: {origins.shape}")
                 dirs = dirs[mask]
                 gt = gt[mask]
             #---------------CUSTOM END-------------------------------
