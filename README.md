@@ -55,4 +55,4 @@ Logs are saved to ckpt/exp_name
 
 # Dataset:
 
-svox2 can't handle PNG and JPG in uppercase, so these need to be converted to lowercase
+Use colmap_to_NSVF.py script after camera calibration to create a dataset from input images.
