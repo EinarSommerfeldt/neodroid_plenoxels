@@ -12,7 +12,7 @@ pip install tensorboard
 ```
 
 # Compiling CUDA library
-This most be done when first running Plenoxels and everytime the CUDA code is changed.
+This most be done when first running Plenoxels and everytime the CUDA code is changed.\
 In /svox2:
 ```
 pip install -e . --verbose
