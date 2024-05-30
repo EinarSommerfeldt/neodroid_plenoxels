@@ -1,6 +1,6 @@
 # neodroid_plenoxels
 
-# Idun setup:
+# Idun setup
 ```
 module load PyTorch/1.12.1-foss-2022a-CUDA-11.7.0
 pip install tqdm
@@ -10,13 +10,9 @@ pip install opencv-python
 pip install matplotlib
 pip install tensorboard
 ```
-In /svox2:
-```
-pip install -e . --verbose
-```
 
 # Compiling CUDA library
-
+This most be done when first running Plenoxels and everytime the CUDA code is changed.
 In /svox2:
 ```
 pip install -e . --verbose
