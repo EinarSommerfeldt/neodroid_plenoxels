@@ -15,29 +15,7 @@ In /svox2:
 pip install -e . --verbose
 ```
 
-# Environment Setup:
-
-Using the https://github.com/sxyu/svox2 environment did NOT work.
-
-Used https://github.com/DanJbk/Plenoxels requirements.txt, replaced "pytorch" with "torch".
-
-Install sequence:
-```
-conda create --name dan_plenoxel
-conda activate dan_plenoxel
-pip install -r requirements.txt
-sudo apt install python-is-python3
-pip install scipy
-pip install imageio
-pip install opencv-python
-pip install tensorboard
-pip install lpips
-pip install imageio[ffmpeg]
-pip install pyquaternion
-pip install rdflib
-```
-
-Install cuda matching torch.version.cuda
+# Compiling CUDA library
 
 In /svox2:
 ```
